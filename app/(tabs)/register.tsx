@@ -1,44 +1,38 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert, Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import api from "../services/api";
 
-export default function Login() {
+export default function Register() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    const checkToken = async () => {
-      const token = await AsyncStorage.getItem("token");
-      if (token) router.replace("/home");
-    };
-    checkToken();
-  }, []);
-
-  const login = async () => {
-    if (!email || !password) {
+  const register = async () => {
+    if (!name || !email || !password) {
       return Alert.alert("Error", "Por favor completa todos los campos");
     }
 
     try {
-      const response = await api.post("/auth/login", { email, password });
-      await AsyncStorage.setItem("token", response.data.token);
-      router.replace("/home");
+      await api.post("/auth/register", { name, email, password });
+      Alert.alert("Éxito", "Usuario creado correctamente");
+      router.push("/"); // Ir a login
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        Alert.alert("Error", "Correo o contraseña incorrecta");
-      } else {
-        Alert.alert("Error", error.response?.data?.message || error.message);
-      }
+      Alert.alert("Error", error.response?.data?.message || error.message);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>BookNotes</Text>
+      <Text style={styles.title}>Registro</Text>
 
+      <TextInput
+        placeholder="Nombre"
+        value={name}
+        onChangeText={setName}
+        style={styles.input}
+      />
       <TextInput
         placeholder="Correo"
         value={email}
@@ -53,10 +47,10 @@ export default function Login() {
         style={styles.input}
       />
 
-      <Button title="Iniciar sesión" onPress={login} />
+      <Button title="Registrarse" onPress={register} />
 
-      <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={styles.link}>¿No tienes cuenta? Regístrate aquí</Text>
+      <TouchableOpacity onPress={() => router.push("/")}>
+        <Text style={styles.link}>¿Ya tienes cuenta? Inicia sesión</Text>
       </TouchableOpacity>
     </View>
   );
