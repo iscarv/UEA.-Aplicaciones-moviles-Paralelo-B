@@ -1,37 +1,26 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "@/app/services/api";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert, Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import api from "../services/api";
 
 export default function Login() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    const checkToken = async () => {
-      const token = await AsyncStorage.getItem("token");
-      if (token) router.replace("/home");
-    };
-    checkToken();
-  }, []);
-
   const login = async () => {
     if (!email || !password) {
-      return Alert.alert("Error", "Por favor completa todos los campos");
+      return Alert.alert("Error", "Complete todos los campos");
     }
 
     try {
-      const response = await api.post("/auth/login", { email, password });
-      await AsyncStorage.setItem("token", response.data.token);
+      await api.post("/auth/login", { email, password });
+
       router.replace("/home");
+
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        Alert.alert("Error", "Correo o contraseña incorrecta");
-      } else {
-        Alert.alert("Error", error.response?.data?.message || error.message);
-      }
+      Alert.alert("Error", error.response?.data?.message || error.message);
     }
   };
 
@@ -45,6 +34,7 @@ export default function Login() {
         onChangeText={setEmail}
         style={styles.input}
       />
+
       <TextInput
         placeholder="Contraseña"
         secureTextEntry
@@ -53,10 +43,10 @@ export default function Login() {
         style={styles.input}
       />
 
-      <Button title="Iniciar sesión" onPress={login} />
+      <Button title="Ingresar" onPress={login} />
 
       <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={styles.link}>¿No tienes cuenta? Regístrate aquí</Text>
+        <Text style={styles.link}>Crear cuenta</Text>
       </TouchableOpacity>
     </View>
   );
@@ -64,8 +54,7 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 20 },
-  title: { fontSize: 28, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  title: { fontSize: 32, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
   input: { borderWidth: 1, borderColor: "#ccc", marginBottom: 10, padding: 8, borderRadius: 5 },
-  link: { color: "#007bff", textAlign: "center", marginTop: 10, textDecorationLine: "underline" },
+  link: { color: "#007bff", textAlign: "center", marginTop: 10 },
 });
-

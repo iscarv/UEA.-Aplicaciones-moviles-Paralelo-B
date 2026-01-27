@@ -3,7 +3,12 @@ import { Platform } from "react-native";
 
 const baseURL =
   Platform.OS === "web"
-    ? "http://localhost:3000/api/auth"
-    : "http://192.168.100.12:3000/api/auth"; // tu IP local
+    ? "http://localhost:3000/api"
+    : "http://192.168.100.12:3000/api";
 
-export default axios.create({ baseURL });
+const api = axios.create({
+  baseURL,
+});
+
+export default api;
+
