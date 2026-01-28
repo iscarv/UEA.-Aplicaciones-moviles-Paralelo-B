@@ -17,32 +17,46 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [registered, setRegistered] = useState(false);
 
   const register = async () => {
-    if (!name || !email || !password) {
-      return Alert.alert("Error", "Completa todos los campos");
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Error", "Completa todos los campos");
+      return;
     }
 
     try {
       await api.post("/auth/register", {
-        username: name,   // 👈 backend espera username
-        email,
+        name: name.trim(),
+        email: email.trim(),
         password,
-        role: "user",     // 👈 requerido por el backend
       });
 
-      Alert.alert("Éxito", "Usuario creado");
-      router.replace("/home");
+      // Limpiar campos
+      setName("");
+      setEmail("");
+      setPassword("");
+
+      // Mostrar mensaje en pantalla
+      setRegistered(true);
 
     } catch (error: any) {
-      console.log(error);
-      Alert.alert("Error", error.response?.data?.message || error.message);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Error al registrar"
+      );
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Registro</Text>
+
+      {registered && (
+        <Text style={styles.success}>
+          ✅ Usuario registrado correctamente. Ahora inicia sesión.
+        </Text>
+      )}
 
       <TextInput
         placeholder="Nombre"
@@ -53,6 +67,7 @@ export default function Register() {
 
       <TextInput
         placeholder="Correo"
+        autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -69,7 +84,7 @@ export default function Register() {
       <Button title="Registrarse" onPress={register} />
 
       <TouchableOpacity onPress={() => router.replace("/")}>
-        <Text style={styles.link}>Volver al login</Text>
+        <Text style={styles.link}>Ir al login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -97,6 +112,14 @@ const styles = StyleSheet.create({
   link: {
     color: "#007bff",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 15,
+    fontSize: 16,
+  },
+  success: {
+    color: "green",
+    textAlign: "center",
+    marginBottom: 15,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

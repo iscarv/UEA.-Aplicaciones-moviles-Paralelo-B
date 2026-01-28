@@ -4,15 +4,34 @@ const jwt = require("jsonwebtoken");
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    let { name, email, password } = req.body;
+
+    // Limpiar espacios
+    name = name?.trim();
+    email = email?.trim();
+
+    // Validar campos (evita NULL y strings vacíos)
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Todos los campos son obligatorios" });
+    }
 
     const [existing] = await User.findByEmail(email);
-    if (existing.length) return res.status(400).json({ message: "Correo ya registrado" });
+    if (existing.length) {
+      return res.status(400).json({ message: "Correo ya registrado" });
+    }
 
     const hash = bcrypt.hashSync(password, 8);
-    await User.create({ name, email, password: hash, role_id: 1 });
 
-    res.status(201).json({ message: "Usuario creado correctamente" });
+    await User.create({
+      name,
+      email,
+      password: hash,
+      role_id: 1,
+    });
+
+    // IMPORTANTE: aquí NO se hace login automático
+    res.status(201).json({ message: "Usuario registrado correctamente" });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error del servidor" });
@@ -24,13 +43,23 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     const [rows] = await User.findByEmail(email);
-    if (!rows.length) return res.status(401).json({ message: "Correo o contraseña incorrecta" });
+    if (!rows.length) {
+      return res.status(401).json({ message: "Correo o contraseña incorrecta" });
+    }
 
     const valid = bcrypt.compareSync(password, rows[0].password);
-    if (!valid) return res.status(401).json({ message: "Correo o contraseña incorrecta" });
+    if (!valid) {
+      return res.status(401).json({ message: "Correo o contraseña incorrecta" });
+    }
 
-    const token = jwt.sign({ id: rows[0].id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign(
+      { id: rows[0].id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
     res.json({ token });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error del servidor" });
@@ -40,12 +69,21 @@ exports.login = async (req, res) => {
 exports.me = async (req, res) => {
   try {
     const [rows] = await User.findById(req.user.id);
-    if (!rows.length) return res.status(404).json({ message: "Usuario no encontrado" });
+    if (!rows.length) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
 
-    const user = { id: rows[0].id, name: rows[0].name, email: rows[0].email };
+    const user = {
+      id: rows[0].id,
+      name: rows[0].name,
+      email: rows[0].email,
+    };
+
     res.json(user);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error del servidor" });
   }
 };
+
