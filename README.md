@@ -1,50 +1,97 @@
-# Welcome to your Expo app 👋
+# Sistema de Registro y Login con Roles – BookNotes
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Proyecto desarrollado con Node.js, Express, MySQL y React Native (Expo).
+Incluye registro de usuarios con roles, inicio de sesión con JWT, persistencia de sesión, vista protegida y cierre de sesión.
 
-## Get started
+## Tecnologías utilizadas
 
-1. Install dependencies
+Node.js + Express
+MySQL
+React Native (Expo)
+JWT
+DBeaver + HeidiSQL
 
-   ```bash
-   npm install
-   ```
+## Estructura del proyecto
 
-2. Start the app
+### Backend
+backend/
+ ├ controllers/
+ ├ models/
+ ├ routes/
+ ├ middleware/
+ ├ config/
+ ├ index.js
+ ├ package.json
+ └ .env
 
-   ```bash
-   npx expo start
-   ```
+## Frontend
 
-In the output, you'll find options to open the app in a
+frontend/
+ ├ app/
+ │   ├ _layout.tsx
+ │   ├ index.tsx
+ │   ├ register.tsx
+ │   ├ home.tsx
+ │   ├ books.tsx
+ │   └ book-detail.tsx
+ │
+ ├ services/
+ │   └ api.ts
+ │
+ └ package.json
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Variables de entorno (.env)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+DB_HOST=localhost
+DB_USER=booknotes_user
+DB_PASSWORD=12345678
+DB_NAME=booknotes
+DB_PORT=3306
+JWT_SECRET=booknotes_secret
+PORT=3000
 
-## Get a fresh project
 
-When you're ready, run:
+## Base de datos
 
-```bash
-npm run reset-project
-```
+Creada en DBeaver usando HeidiSQL.
+Tablas:
+usuarios
+roles
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Backend
+### Instalación
 
-## Learn more
+cd backend
+npm install
+node index.js
 
-To learn more about developing your project with Expo, look at the following resources:
+## Servidor:
+http://localhost:3000
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Frontend
 
-## Join the community
+cd frontend
+npm install
+npx expo start
 
-Join our community of developers creating universal apps.
+## Funcionalidades
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Registro con rol
+Login con JWT
+Persistencia de sesión
+Ruta protegida
+Logout
+
+## Flujo del sistema
+
+Registro  
+Login  
+Acceso a Home  
+Logout  
+
+(Registro → Login → Home → Logout)
+
+
+
+Autor: Isca Madaí Ortiz Sabando
+

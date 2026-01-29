@@ -2,34 +2,37 @@ const User = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+// ================= REGISTER =================
 exports.register = async (req, res) => {
   try {
-    let { name, email, password } = req.body;
+    let { name, email, password, role_id } = req.body;
 
     // Limpiar espacios
     name = name?.trim();
     email = email?.trim();
 
-    // Validar campos (evita NULL y strings vacíos)
+    // Validar campos
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Todos los campos son obligatorios" });
     }
 
+    // Verificar correo existente
     const [existing] = await User.findByEmail(email);
     if (existing.length) {
       return res.status(400).json({ message: "Correo ya registrado" });
     }
 
+    // Encriptar contraseña
     const hash = bcrypt.hashSync(password, 8);
 
+    // Crear usuario con rol desde frontend
     await User.create({
       name,
       email,
       password: hash,
-      role_id: 1,
+      role_id: role_id || 1, // 👈 recibe Picker (default Usuario)
     });
 
-    // IMPORTANTE: aquí NO se hace login automático
     res.status(201).json({ message: "Usuario registrado correctamente" });
 
   } catch (err) {
@@ -38,6 +41,7 @@ exports.register = async (req, res) => {
   }
 };
 
+// ================= LOGIN =================
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -66,9 +70,11 @@ exports.login = async (req, res) => {
   }
 };
 
+// ================= ME =================
 exports.me = async (req, res) => {
   try {
     const [rows] = await User.findById(req.user.id);
+
     if (!rows.length) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
@@ -77,6 +83,7 @@ exports.me = async (req, res) => {
       id: rows[0].id,
       name: rows[0].name,
       email: rows[0].email,
+      role_id: rows[0].role_id,
     };
 
     res.json(user);
@@ -86,4 +93,5 @@ exports.me = async (req, res) => {
     res.status(500).json({ message: "Error del servidor" });
   }
 };
+
 
