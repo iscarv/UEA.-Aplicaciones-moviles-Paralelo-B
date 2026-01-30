@@ -43,11 +43,17 @@ frontend/
 ## Variables de entorno (.env)
 
 DB_HOST=localhost
+
 DB_USER=booknotes_user
+
 DB_PASSWORD=12345678
+
 DB_NAME=booknotes
+
 DB_PORT=3306
+
 JWT_SECRET=booknotes_secret
+
 PORT=3000
 
 
