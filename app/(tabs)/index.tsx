@@ -12,31 +12,41 @@ import {
   View,
 } from "react-native";
 
+// Pantalla de Login
 export default function Login() {
   const router = useRouter();
 
+  // Estado del correo
   const [email, setEmail] = useState("");
+  // Estado de la contraseña
   const [password, setPassword] = useState("");
 
+  // Función de inicio de sesión
   const login = async () => {
+    // Validación básica: campos vacíos
     if (!email.trim() || !password.trim()) {
       Alert.alert("Aviso", "Ingrese sus credenciales");
       return;
     }
 
     try {
+      // Petición al backend para autenticar usuario
       const res = await api.post("/auth/login", {
-        email: email.trim().toLowerCase(),
+        email: email.trim().toLowerCase(),  // correo siempre en minúsculas
         password,
       });
 
+      // Guarda el token JWT localmente (persistencia de sesión)
       await AsyncStorage.setItem("token", res.data.token);
 
+      // Redirige a la vista protegida Home
       router.replace("/home");
 
     } catch (error: any) {
+       // Obtiene mensaje del backend
       const msg = error.response?.data?.message;
 
+      // Mensajes personalizados según el error
       if (msg?.toLowerCase().includes("correo")) {
         Alert.alert("Error", "Usuario incorrecto");
       } else if (msg?.toLowerCase().includes("contraseña")) {
@@ -79,6 +89,7 @@ export default function Login() {
   );
 }
 
+// Estilos de la pantalla
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,7 +1,12 @@
+// Importa la instancia configurada de axios para consumir el backend
 import api from "@/app/services/api";
+// Selector desplegable para elegir el rol
 import { Picker } from "@react-native-picker/picker";
+// Hook de navegación de Expo Router
 import { useRouter } from "expo-router";
+// Importa React y el hook useState para manejar estados
 import React, { useState } from "react";
+// Componentes visuales básicos de React Native
 import {
   Alert,
   Button,
@@ -12,26 +17,32 @@ import {
 } from "react-native";
 
 export default function Register() {
+  // Inicializa el router para poder navegar entre pantallas
   const router = useRouter();
 
+  // Estados para almacenar los valores del formulario
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [roleId, setRoleId] = useState(1);
 
-  // 👇 MENSAJE VISUAL DE ÉXITO (web + móvil)
+  // Estado que controla el mensaje visual de registro exitoso
   const [success, setSuccess] = useState(false);
 
+  // Función que se ejecuta al presionar el botón "Registrarse"
   const register = async () => {
+    // Validación básica: verifica que ningún campo esté vacío
     if (!name.trim() || !email.trim() || !password.trim()) {
       Alert.alert("Error", "Completa todos los campos");
       return;
     }
 
+    // Formatea el nombre para que empiece con mayúscula
     const formattedName =
       name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 
     try {
+      // Envía los datos del usuario al backend para registrarlo
       await api.post("/auth/register", {
         name: formattedName,
         email: email.toLowerCase(),
@@ -39,16 +50,17 @@ export default function Register() {
         role_id: roleId,
       });
 
-      // 👇 activar mensaje verde
+      // Activa el mensaje verde indicando que el registro fue exitoso
       setSuccess(true);
 
-      // opcional: limpiar campos
+      // Limpia los campos después del registro
       setName("");
       setEmail("");
       setPassword("");
       setRoleId(1);
 
     } catch (error: any) {
+      // Muestra errores provenientes del servidor
       console.log(error.response?.data || error);
       Alert.alert(
         "Error",
@@ -58,6 +70,7 @@ export default function Register() {
   };
 
   return (
+    // Contenedor principal centrado en pantalla
     <View
       style={{
         flex: 1,
@@ -66,6 +79,7 @@ export default function Register() {
         backgroundColor: "#fde2ea",
       }}
     >
+      {/* Tarjeta blanca que contiene el formulario */}
       <View
         style={{
           backgroundColor: "#fff",
@@ -74,6 +88,8 @@ export default function Register() {
           elevation: 5,
         }}
       >
+
+        {/* Título de la pantalla */}
         <Text
           style={{
             fontSize: 26,
@@ -86,14 +102,14 @@ export default function Register() {
           Registro
         </Text>
 
-        {/* 👇 MENSAJE VERDE */}
+        {/* Mensaje verde que aparece al registrarse correctamente */}
         {success && (
           <Text style={{ color: "green", textAlign: "center", marginBottom: 10 }}>
             Usuario registrado correctamente. Inicie sesión.
           </Text>
         )}
 
-        {/* Nombre */}
+        {/* Campo de entrada para el nombre */}
         <TextInput
           placeholder="Nombre"
           value={name}
@@ -109,7 +125,7 @@ export default function Register() {
           }}
         />
 
-        {/* Correo */}
+        {/* Campo de entrada para el correo */}
         <TextInput
           placeholder="Correo"
           autoCapitalize="none"
@@ -124,7 +140,7 @@ export default function Register() {
           }}
         />
 
-        {/* Contraseña */}
+        {/* Campo de entrada para la contraseña */}
         <TextInput
           placeholder="Contraseña"
           secureTextEntry
@@ -139,8 +155,10 @@ export default function Register() {
           }}
         />
 
+      {/* Texto informativo del selector de rol */}
         <Text style={{ marginBottom: 5 }}>Rol</Text>
 
+      {/* Selector desplegable para elegir el rol del usuario */}
         <View
           style={{
             borderWidth: 1,
@@ -155,8 +173,10 @@ export default function Register() {
           </Picker>
         </View>
 
+       {/* Botón que ejecuta la función de registro */}
         <Button title="Registrarse" color="#e75480" onPress={register} />
 
+      {/* Enlace para volver a la pantalla de login */}
         <TouchableOpacity onPress={() => router.replace("/")}>
           <Text
             style={{

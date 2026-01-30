@@ -4,20 +4,25 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 
+// Pantalla protegida Home
 export default function Home() {
   const router = useRouter();
 
+  // Estado del usuario autenticado
   const [user, setUser] = useState<any>(null);
+  // Estado de carga mientras se valida el token
   const [loading, setLoading] = useState(true);
 
-  // 👇 NUEVO
+   // Estado para controlar acceso no autorizado
   const [unauthorized, setUnauthorized] = useState(false);
 
+  // Se ejecuta al cargar la pantalla
   useEffect(() => {
     const checkAuth = async () => {
+      // Obtiene token guardado
       const token = await AsyncStorage.getItem("token");
 
-      // 👉 Entraron directo sin login
+      // Si no hay token, bloquear acceso
       if (!token) {
         setUnauthorized(true);
         setLoading(false);
@@ -25,17 +30,21 @@ export default function Home() {
       }
 
       try {
+        // Consulta al backend para obtener datos del usuario
         const res = await api.get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        // Guarda datos del usuario
         setUser(res.data);
 
       } catch {
+        // Si el token falla se elimina y se bloquea acceso
         await AsyncStorage.removeItem("token");
         setUnauthorized(true);
 
       } finally {
+        // Finaliza carga
         setLoading(false);
       }
     };
@@ -43,7 +52,7 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  // 👉 pantalla NO AUTORIZADO
+  // Vista cuando el usuario no está autenticado
   if (unauthorized) {
     return (
       <View style={styles.container}>
@@ -64,9 +73,10 @@ export default function Home() {
     );
   }
 
-  // 👉 mientras valida token
+  // Mientras se valida token no se muestra nada
   if (loading || !user) return null;
 
+  // Cerrar sesión: elimina token y regresa al login
   const logout = async () => {
     await AsyncStorage.removeItem("token");
     router.replace("/");
@@ -91,6 +101,7 @@ export default function Home() {
   );
 }
 
+// Estilos de la pantalla
 const styles = StyleSheet.create({
   container: {
     flex: 1,
