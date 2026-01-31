@@ -20,5 +20,8 @@ router.post("/login", controller.login);
 // Primero pasa por authMiddleware y luego ejecuta controller.me
 router.get("/me", authMiddleware, controller.me);
 
+// Ruta para validar si un correo ya existe (validación asíncrona desde frontend)
+router.get("/check-email/:email", controller.checkEmail);
+
 // Exporta el router para usarlo en index.js
 module.exports = router;

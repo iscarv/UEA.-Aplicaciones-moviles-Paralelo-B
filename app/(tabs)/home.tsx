@@ -4,25 +4,37 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 
-// Pantalla protegida Home
+/*
+  Pantalla protegida Home
+
+  Aquí solo entran usuarios autenticados.
+  Si no hay token → se muestra botón para ir al login.
+*/
+
 export default function Home() {
   const router = useRouter();
 
-  // Estado del usuario autenticado
+  // Datos del usuario autenticado
   const [user, setUser] = useState<any>(null);
-  // Estado de carga mientras se valida el token
+
+  // Controla carga inicial
   const [loading, setLoading] = useState(true);
 
-   // Estado para controlar acceso no autorizado
+  // Controla acceso no autorizado
   const [unauthorized, setUnauthorized] = useState(false);
 
-  // Se ejecuta al cargar la pantalla
+  /*
+    Al cargar Home:
+
+    - Lee token
+    - Si no existe → acceso denegado
+    - Si existe → consulta /auth/me
+  */
   useEffect(() => {
     const checkAuth = async () => {
-      // Obtiene token guardado
       const token = await AsyncStorage.getItem("token");
 
-      // Si no hay token, bloquear acceso
+      // Si no hay token → no autorizado
       if (!token) {
         setUnauthorized(true);
         setLoading(false);
@@ -30,21 +42,19 @@ export default function Home() {
       }
 
       try {
-        // Consulta al backend para obtener datos del usuario
+        // Valida token con backend
         const res = await api.get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // Guarda datos del usuario
         setUser(res.data);
 
       } catch {
-        // Si el token falla se elimina y se bloquea acceso
+        // Token inválido → se elimina
         await AsyncStorage.removeItem("token");
         setUnauthorized(true);
 
       } finally {
-        // Finaliza carga
         setLoading(false);
       }
     };
@@ -52,7 +62,9 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  // Vista cuando el usuario no está autenticado
+  /*
+    Vista cuando NO está autenticado
+  */
   if (unauthorized) {
     return (
       <View style={styles.container}>
@@ -63,23 +75,33 @@ export default function Home() {
             Introduzca sus credenciales
           </Text>
 
+          {/* ⚠️ IMPORTANTE:
+              NUNCA navegar a "/"
+              SIEMPRE directo a /login
+          */}
           <Button
             title="Iniciar sesión"
             color="#e75480"
-            onPress={() => router.replace("/")}
+            onPress={() => router.replace("/login")}
           />
         </View>
       </View>
     );
   }
 
-  // Mientras se valida token no se muestra nada
+  // Mientras valida token no muestra nada
   if (loading || !user) return null;
 
-  // Cerrar sesión: elimina token y regresa al login
+  /*
+    Cerrar sesión:
+
+    - Borra SOLO el token
+    - NO toca seenOnboarding
+    - Va directo al login
+  */
   const logout = async () => {
     await AsyncStorage.removeItem("token");
-    router.replace("/");
+    router.replace("/login");
   };
 
   return (
@@ -101,7 +123,8 @@ export default function Home() {
   );
 }
 
-// Estilos de la pantalla
+/* ================= ESTILOS ================= */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

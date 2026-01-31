@@ -1,130 +1,58 @@
-import api from "@/app/services/api";
+// Importa Redirect para navegación automática
+import { Redirect } from "expo-router";
+
+// AsyncStorage permite guardar datos localmente en el dispositivo
+// Aquí lo usamos para saber si el usuario ya vio el onboarding
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import {
-  Alert,
-  Button,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
 
-// Pantalla de Login
-export default function Login() {
-  const router = useRouter();
+// Hooks de React
+import { useEffect, useState } from "react";
 
-  // Estado del correo
-  const [email, setEmail] = useState("");
-  // Estado de la contraseña
-  const [password, setPassword] = useState("");
+/*
+  Pantalla raíz de la aplicación.
 
-  // Función de inicio de sesión
-  const login = async () => {
-    // Validación básica: campos vacíos
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Aviso", "Ingrese sus credenciales");
-      return;
-    }
+  Su función es decidir automáticamente a dónde enviar al usuario:
 
-    try {
-      // Petición al backend para autenticar usuario
-      const res = await api.post("/auth/login", {
-        email: email.trim().toLowerCase(),  // correo siempre en minúsculas
-        password,
-      });
+   Si NO ha visto el onboarding → /onboarding/welcome
+   Si YA lo vio → /login
 
-      // Guarda el token JWT localmente (persistencia de sesión)
-      await AsyncStorage.setItem("token", res.data.token);
+  Esto evita que el onboarding se repita cada vez que abre la app.
+*/
 
-      // Redirige a la vista protegida Home
-      router.replace("/home");
+export default function Index() {
+  // Indica cuándo ya se leyó AsyncStorage
+  const [ready, setReady] = useState(false);
 
-    } catch (error: any) {
-       // Obtiene mensaje del backend
-      const msg = error.response?.data?.message;
+  // Guarda si el onboarding ya fue visto
+  const [seenOnboarding, setSeenOnboarding] = useState(false);
 
-      // Mensajes personalizados según el error
-      if (msg?.toLowerCase().includes("correo")) {
-        Alert.alert("Error", "Usuario incorrecto");
-      } else if (msg?.toLowerCase().includes("contraseña")) {
-        Alert.alert("Error", "Contraseña incorrecta");
-      } else {
-        Alert.alert("Error", "Credenciales inválidas");
-      }
-    }
-  };
+  // Se ejecuta al cargar la app
+  useEffect(() => {
+    const check = async () => {
+      
+           
+      // Lee la bandera guardada en el dispositivo
+      const seen = await AsyncStorage.getItem("seenOnboarding");
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>BookNotes</Text>
+      // Convierte a booleano
+      setSeenOnboarding(!!seen);
 
-        {/* CORREO – siempre minúsculas */}
-        <TextInput
-          placeholder="Correo"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={(text) => setEmail(text.toLowerCase())}
-          style={styles.input}
-        />
+      // Marca que ya terminó de cargar
+      setReady(true);
+    };
 
-        <TextInput
-          placeholder="Contraseña"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-        />
+    check();
+  }, []);
 
-        <Button title="Ingresar" color="#e75480" onPress={login} />
+  // Mientras AsyncStorage carga, no se muestra nada
+  // Evita errores de navegación temprana
+  if (!ready) return null;
 
-        <TouchableOpacity onPress={() => router.push("/register")}>
-          <Text style={styles.link}>Crear cuenta</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  // Si el usuario ya vio el onboarding → login
+  if (seenOnboarding) {
+    return <Redirect href="/login" />;
+  }
+
+  // Si no lo ha visto → onboarding
+  return <Redirect href="/onboarding/welcome" />;
 }
-
-// Estilos de la pantalla
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fde2ea",
-    justifyContent: "center",
-    padding: 20,
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    padding: 25,
-    borderRadius: 12,
-    elevation: 4,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#e75480",
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    marginBottom: 12,
-    padding: 10,
-    borderRadius: 6,
-  },
-
-  link: {
-    color: "#e75480",
-    textAlign: "center",
-    marginTop: 15,
-  },
-});
-

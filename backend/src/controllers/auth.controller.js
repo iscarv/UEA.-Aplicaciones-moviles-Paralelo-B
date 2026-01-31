@@ -116,3 +116,16 @@ exports.me = async (req, res) => {
     res.status(500).json({ message: "Error del servidor" });
   }
 };
+
+// ================= VALIDACIÓN ASÍNCRONA DE CORREO =================
+exports.checkEmail = async (req, res) => {
+  // Obtiene el correo desde los parámetros de la URL
+  const email = req.params.email;
+
+  // Busca si existe un usuario con ese correo
+  const [rows] = await User.findByEmail(email);
+
+  // Devuelve true si existe, false si no
+  res.json({ exists: rows.length > 0 });
+};
+
