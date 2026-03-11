@@ -1,13 +1,15 @@
-// Cliente API configurado (axios)
+// ================= IMPORTS =================
+
+// Instancia de axios configurada para conectarse al backend
 import api from "@/app/services/api";
 
-// AsyncStorage para guardar el token de sesión
+// AsyncStorage permite guardar datos localmente en el dispositivo
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Navegación con Expo Router
+// Router de Expo para navegar entre pantallas
 import { useRouter } from "expo-router";
 
-// React y hooks
+// Hooks de React
 import React, { useState } from "react";
 
 // Componentes de React Native
@@ -21,73 +23,104 @@ import {
   View,
 } from "react-native";
 
-/*
-  Pantalla de Login
-*/
 
+// ================= COMPONENTE LOGIN =================
 export default function Login() {
+
+  // Router para redireccionar entre pantallas
   const router = useRouter();
 
-  // Estado del correo
+  // Estados para guardar lo que escribe el usuario
   const [email, setEmail] = useState("");
-
-  // Estado de la contraseña
   const [password, setPassword] = useState("");
 
-  /*
-    Función de inicio de sesión
-  */
+
+
+  // ================= FUNCIÓN LOGIN =================
   const login = async () => {
-    // Validación básica: evita enviar campos vacíos
+
+    // -------- Validación campos vacíos --------
     if (!email.trim() || !password.trim()) {
       Alert.alert("Aviso", "Ingrese sus credenciales");
       return;
     }
 
+    // -------- Validación básica del correo --------
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email.trim().toLowerCase())) {
+      Alert.alert("Error", "Ingrese un correo válido");
+      return;
+    }
+
     try {
-      // Petición al backend
+
+      // ================= PETICIÓN AL BACKEND =================
+      // Enviamos correo y contraseña al backend
       const res = await api.post("/auth/login", {
         email: email.trim().toLowerCase(),
         password,
       });
 
-      // Guarda el token JWT para mantener sesión iniciada
-      await AsyncStorage.setItem("token", res.data.token);
+      // ================= GUARDAR TOKEN =================
+      // El backend devuelve un token JWT que identifica al usuario
+      const token = res.data.token;
 
-      // Redirige a Home cuando el login es exitoso
+      // Guardamos el token localmente
+      await AsyncStorage.setItem("token", token);
+
+
+      // ================= GUARDAR EXPIRACIÓN =================
+      // Guardamos cuándo expira el token (1 hora)
+      const tokenExpiry = Date.now() + 3600 * 1000;
+
+      await AsyncStorage.setItem("token_expires", tokenExpiry.toString());
+
+
+      // ================= REDIRECCIÓN =================
+      // Si el login fue correcto enviamos al Home
+      // replace evita volver atrás con el botón del celular
       router.replace("/home");
 
-    } catch {
-      /*
-        Si falla el login (correo o contraseña incorrectos):
 
-        👉 Se muestra UN SOLO mensaje genérico.
-        Esto es buena práctica porque:
-        ✔ no confunde al usuario
-        ✔ no revela si el correo existe
-        ✔ es más seguro
-      */
-      Alert.alert("Error", "Correo o contraseña incorrectos");
+    } catch (error: any) {
+
+      // Mostrar error en consola para debugging
+      console.error("Error al iniciar sesión:", error);
+
+      // Mensaje seguro (no revela si el correo existe)
+      const msg =
+        error.response?.data?.message || "Correo o contraseña incorrectos";
+
+      Alert.alert("Error", msg);
     }
   };
 
+
+
+  // ================= INTERFAZ =================
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        {/* Título de la app */}
-        <Text style={styles.title}>BookNotes</Text>
 
-        {/* Input correo */}
+      <View style={styles.card}>
+
+        {/* Título de la app */}
+        <Text style={styles.title}>BookNotes 📚</Text>
+
+
+        {/* INPUT CORREO */}
         <TextInput
           placeholder="Correo"
           accessibilityLabel="Correo electrónico"
           autoCapitalize="none"
+          keyboardType="email-address"
           value={email}
           onChangeText={(text) => setEmail(text.toLowerCase())}
           style={styles.input}
         />
 
-        {/* Input contraseña */}
+
+        {/* INPUT CONTRASEÑA */}
         <TextInput
           placeholder="Contraseña"
           accessibilityLabel="Contraseña"
@@ -97,21 +130,34 @@ export default function Login() {
           style={styles.input}
         />
 
-        {/* Botón de ingreso */}
-        <Button title="Ingresar" color="#e75480" onPress={login} />
 
-        {/* Link para ir a registro */}
-        <TouchableOpacity onPress={() => router.push("/register")}>
-          <Text style={styles.link}>Crear cuenta</Text>
+        {/* BOTÓN LOGIN */}
+        <Button
+          title="Ingresar"
+          color="#e75480"
+          onPress={login}
+        />
+
+
+        {/* LINK A REGISTRO */}
+        <TouchableOpacity
+          onPress={() => router.replace("/register")}
+        >
+          <Text style={styles.link}>
+            Crear cuenta
+          </Text>
         </TouchableOpacity>
+
       </View>
     </View>
   );
 }
 
-/* ================= ESTILOS ================= */
 
+
+// ================= ESTILOS =================
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: "#fde2ea",
@@ -147,5 +193,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 15,
   },
-});
 
+});

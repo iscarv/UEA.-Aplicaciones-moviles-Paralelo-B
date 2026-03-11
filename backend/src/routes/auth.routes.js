@@ -1,27 +1,59 @@
-// Importa Express
+// ================= IMPORTS =================
+
+// Express para crear rutas
 const express = require("express");
 
-// Crea el router para definir rutas del módulo auth
-const router = express.Router();
-
-// Importa el controlador de autenticación
-const controller = require("../controllers/auth.controller");
-
-// Importa el middleware que valida el token JWT
+// Middleware que valida JWT
 const authMiddleware = require("../middleware/auth.middleware");
 
-// Ruta para registrar usuarios
-router.post("/register", controller.register);
+// Controller con toda la lógica de Auth
+const authController = require("../controllers/auth.controller");
 
-// Ruta para iniciar sesión
-router.post("/login", controller.login);
+// ================= ROUTER =================
+const router = express.Router();
 
-// Ruta protegida para obtener datos del usuario autenticado
-// Primero pasa por authMiddleware y luego ejecuta controller.me
-router.get("/me", authMiddleware, controller.me);
+/*
+================= RUTA DE REGISTRO =================
 
-// Ruta para validar si un correo ya existe (validación asíncrona desde frontend)
-router.get("/check-email/:email", controller.checkEmail);
+- Llama directamente a authController.register
+- Este controlador se encarga de:
+  ✔ Validar campos
+  ✔ Verificar si el email existe
+  ✔ Hashear la contraseña
+  ✔ Insertar usuario en la base de datos
+  ✔ Devolver mensaje al frontend
+*/
+router.post("/register", authController.register);
 
-// Exporta el router para usarlo en index.js
+/*
+================= RUTA DE LOGIN =================
+
+- Llama directamente a authController.login
+- Este controlador se encarga de:
+  ✔ Buscar usuario por email
+  ✔ Comparar contraseña con bcrypt
+  ✔ Generar token JWT
+  ✔ Devolver token y datos del usuario al frontend
+*/
+router.post("/login", authController.login);
+
+/*
+================= RUTA DE VALIDACIÓN DE EMAIL =================
+
+- Llama a authController.checkEmail
+- Permite validar de forma asincrónica si un correo ya está registrado
+- Devuelve { exists: true/false } para el frontend
+*/
+router.get("/check-email/:email", authController.checkEmail);
+
+/*
+================= RUTA PROTEGIDA /me =================
+
+- Requiere JWT en header Authorization
+- authMiddleware verifica token
+- authController.me devuelve datos del usuario logueado
+*/
+router.get("/me", authMiddleware, authController.me);
+
+// ================= EXPORT =================
 module.exports = router;

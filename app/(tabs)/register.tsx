@@ -1,12 +1,20 @@
 // ================= IMPORTS =================
 
-// React + hooks
+// API para conectar con el backend
+import api from "@/app/services/api";
+
+// Selector de rol
+import { Picker } from "@react-native-picker/picker";
+
+// Navegación con Expo Router
+import { useRouter } from "expo-router";
+
+// Hooks de React
 import React, { useRef, useState } from "react";
 
-// Componentes React Native
+// Componentes de React Native
 import {
   Alert,
-  Button,
   StyleSheet,
   Text,
   TextInput,
@@ -14,98 +22,69 @@ import {
   View,
 } from "react-native";
 
-// Cliente axios configurado
-import api from "@/app/services/api";
-
-// Selector de rol
-import { Picker } from "@react-native-picker/picker";
-
-// Navegación Expo Router
-import { useRouter } from "expo-router";
-
-// Zod para validaciones
+// Librería de validación
 import { z } from "zod";
 
-/*
-================= ESQUEMA ZOD =================
 
-✔ Validación por campo
-✔ Longitud mínima contraseña
-✔ Confirmación obligatoria
-✔ Validación cruzada
+// ================= ESQUEMA DE VALIDACIÓN =================
+
+/*
+  Validación del formulario con Zod
+
+  - Nombre obligatorio
+  - Email válido
+  - Password mínimo 6 caracteres
+  - Confirmación de contraseña igual
 */
 
 const registerSchema = z
   .object({
     name: z.string().min(1, "Ingrese su nombre"),
-
     email: z.string().email("Correo inválido"),
-
-    password: z
-      .string()
-      .min(6, "La contraseña debe tener mínimo 6 caracteres"),
-
-    confirmPassword: z
-      .string()
-      .min(6, "Debe confirmar la contraseña"),
+    password: z.string().min(6, "La contraseña debe tener mínimo 6 caracteres"),
+    confirmPassword: z.string().min(6, "Debe confirmar la contraseña"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
   });
 
-/*
-================= COMPONENTE =================
-*/
+
+// ================= COMPONENTE PRINCIPAL =================
 
 export default function Register() {
+
+  // Router para navegar entre pantallas
   const router = useRouter();
 
-  // Estados
+  // ================= ESTADOS =================
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [roleId, setRoleId] = useState(1);
   const [success, setSuccess] = useState(false);
 
-  // ================= REFS PARA MOVER FOCO =================
+
+  // ================= REFS =================
+  // Permiten mover el foco automáticamente entre inputs
 
   const nameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
-  // ================= DEBOUNCE =================
-  // En Expo se usa number, NO NodeJS.Timeout
 
-  const emailTimer = useRef<number | null>(null);
-
-  /*
-    Validación asíncrona del correo con debounce
-
-    ✔ espera 600ms
-    ✔ cancela llamadas previas
-  */
-  const checkEmail = (email: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (emailTimer.current) clearTimeout(emailTimer.current);
-
-      emailTimer.current = setTimeout(async () => {
-        const res = await api.get(`/auth/check-email/${email}`);
-        resolve(res.data.exists);
-      }, 600);
-    });
-  };
-
-  /*
-================= REGISTRO =================
-*/
+  // ================= FUNCIÓN REGISTRAR =================
 
   const register = async () => {
+
     setSuccess(false);
 
-    // Ejecuta validación Zod
+    // ================= VALIDACIÓN =================
+
     const result = registerSchema.safeParse({
       name,
       email,
@@ -113,10 +92,12 @@ export default function Register() {
       confirmPassword,
     });
 
-    // Error → mover foco al primer campo inválido
+    // Si la validación falla
     if (!result.success) {
+
       const field = result.error.issues[0].path[0];
 
+      // Mover foco al campo incorrecto
       if (field === "name") nameRef.current?.focus();
       if (field === "email") emailRef.current?.focus();
       if (field === "password") passwordRef.current?.focus();
@@ -126,65 +107,105 @@ export default function Register() {
       return;
     }
 
-    // Validación asíncrona del correo
-    const exists = await checkEmail(email);
+    // ================= FORMATEO DE DATOS =================
 
-    if (exists) {
-      emailRef.current?.focus();
-      Alert.alert("Error", "Correo ya registrado");
-      return;
-    }
+    /*
+      Se formatea el nombre para garantizar
+      que siempre se guarde correctamente.
+    */
 
-    // Formatea nombre
     const formattedName =
-      name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+      name.trim().charAt(0).toUpperCase() +
+      name.trim().slice(1).toLowerCase();
+
+    const formattedEmail = email.trim().toLowerCase();
+
 
     try {
+
+      // ================= PETICIÓN AL BACKEND =================
+
       await api.post("/auth/register", {
         name: formattedName,
-        email: email.toLowerCase(),
+        email: formattedEmail,
         password,
         role_id: roleId,
       });
 
+      // ================= REGISTRO EXITOSO =================
+
       setSuccess(true);
 
-      // Limpia formulario
+      Alert.alert(
+        "Registrado",
+        "Usuario registrado correctamente. Ahora puede iniciar sesión.",
+        [
+          {
+            text: "Ir a Login",
+            onPress: () => router.replace("/login"),
+          },
+        ]
+      );
+
+      // ================= LIMPIAR FORMULARIO =================
+
       setName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
       setRoleId(1);
-    } catch {
-      Alert.alert("Error", "No se pudo registrar");
+
+    } catch (err: any) {
+
+      console.error("Error registro:", err);
+
+      Alert.alert(
+        "Error",
+        err.response?.data?.message ||
+        "No se pudo registrar el usuario"
+      );
     }
   };
 
+
+  // ================= UI =================
+
   return (
     <View style={styles.container}>
+
       <View style={styles.card}>
+
         <Text style={styles.title}>Registro</Text>
 
+        {/* Mensaje visual de éxito */}
         {success && (
           <Text style={styles.success}>
-            Usuario registrado correctamente. Inicie sesión.
+            Usuario registrado correctamente
           </Text>
         )}
 
-        {/* NOMBRE */}
+        {/* ================= INPUT NOMBRE ================= */}
+
         <TextInput
           ref={nameRef}
           placeholder="Nombre"
           returnKeyType="next"
           onSubmitEditing={() => emailRef.current?.focus()}
           value={name}
+
+          /*
+            Capitaliza automáticamente
+            la primera letra mientras escribe
+          */
           onChangeText={(text) =>
             setName(text.charAt(0).toUpperCase() + text.slice(1))
           }
+
           style={styles.input}
         />
 
-        {/* CORREO */}
+        {/* ================= INPUT EMAIL ================= */}
+
         <TextInput
           ref={emailRef}
           placeholder="Correo"
@@ -193,11 +214,15 @@ export default function Register() {
           returnKeyType="next"
           onSubmitEditing={() => passwordRef.current?.focus()}
           value={email}
+
+          // Guardar siempre en minúsculas
           onChangeText={(text) => setEmail(text.toLowerCase())}
+
           style={styles.input}
         />
 
-        {/* CONTRASEÑA */}
+        {/* ================= INPUT PASSWORD ================= */}
+
         <TextInput
           ref={passwordRef}
           placeholder="Contraseña"
@@ -209,7 +234,8 @@ export default function Register() {
           style={styles.input}
         />
 
-        {/* CONFIRMAR */}
+        {/* ================= CONFIRM PASSWORD ================= */}
+
         <TextInput
           ref={confirmRef}
           placeholder="Confirmar contraseña"
@@ -220,30 +246,43 @@ export default function Register() {
           style={styles.input}
         />
 
+        {/* ================= SELECT ROL ================= */}
+
         <Text style={styles.label}>Rol</Text>
 
         <View style={styles.pickerBox}>
-          <Picker selectedValue={roleId} onValueChange={setRoleId}>
+          <Picker
+            selectedValue={roleId}
+            onValueChange={(value) => setRoleId(value)}
+          >
             <Picker.Item label="Usuario" value={1} />
             <Picker.Item label="Administrador" value={2} />
           </Picker>
         </View>
 
-        <Button title="Registrarse" color="#e75480" onPress={register} />
+        {/* ================= BOTÓN REGISTRARSE ================= */}
+
+        <TouchableOpacity style={styles.button} onPress={register}>
+          <Text style={styles.buttonText}>Registrarse</Text>
+        </TouchableOpacity>
+
+        {/* ================= VOLVER LOGIN ================= */}
 
         <TouchableOpacity onPress={() => router.replace("/login")}>
           <Text style={styles.link}>Volver al login</Text>
         </TouchableOpacity>
+
       </View>
+
     </View>
   );
 }
 
-/*
-================= ESTILOS =================
-*/
+
+// ================= ESTILOS =================
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: "#fde2ea",
@@ -291,9 +330,23 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  button: {
+    backgroundColor: "#e75480",
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+
   link: {
     color: "#e75480",
     textAlign: "center",
     marginTop: 15,
   },
+
 });

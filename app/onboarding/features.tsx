@@ -1,22 +1,32 @@
-// Navegación Expo Router
+// ================= IMPORTS =================
+
+// Hook de navegación de Expo Router
 import { useRouter } from "expo-router";
 
-// Componentes React Native
+// Componentes de interfaz de React Native
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 /*
-  Pantalla intermedia del onboarding (funcionalidades)
+  Pantalla intermedia del onboarding (Features)
+
+  Aquí mostramos al usuario qué puede hacer dentro de BookNotes.
+
+  Flujo:
+  Welcome -> Features -> Access -> Login/Register
 */
 
 export default function Features() {
+
+  // Inicializa el router para navegar entre pantallas
   const router = useRouter();
 
   return (
     <View style={styles.container}>
-      {/* Título principal */}
+
+      {/* ================= TÍTULO ================= */}
       <Text style={styles.title}>¿Qué puedes hacer?</Text>
 
-      {/* Lista de funcionalidades */}
+      {/* ================= LISTA DE FUNCIONALIDADES ================= */}
       <Text style={styles.text}>
         • Registrar tus libros{"\n"}
         • Marcar tu progreso{"\n"}
@@ -25,21 +35,34 @@ export default function Features() {
         • Organizar tus lecturas
       </Text>
 
-      {/* Contenedor botones */}
+      {/* ================= CONTENEDOR BOTONES ================= */}
       <View style={styles.buttons}>
-        {/* BOTÓN ATRÁS */}
-        <TouchableOpacity style={styles.buttonOutline} onPress={() => router.back()}>
+
+        {/* BOTÓN ATRÁS
+           Regresa a la pantalla anterior del onboarding
+        */}
+        <TouchableOpacity
+          style={styles.buttonOutline}
+          onPress={() => router.back()}
+        >
           <Text style={styles.buttonOutlineText}>Atrás</Text>
         </TouchableOpacity>
 
-        {/* BOTÓN SIGUIENTE */}
+        {/* BOTÓN SIGUIENTE
+           Avanza a la pantalla final del onboarding (Access)
+
+           replace() se usa para evitar que el usuario vuelva
+           a esta pantalla con el historial
+        */}
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push("/onboarding/access")}
+          onPress={() => router.replace("/onboarding/access")}
         >
           <Text style={styles.buttonText}>Siguiente</Text>
         </TouchableOpacity>
+
       </View>
+
     </View>
   );
 }
@@ -47,6 +70,8 @@ export default function Features() {
 /* ================= ESTILOS ================= */
 
 const styles = StyleSheet.create({
+
+  // Contenedor principal de la pantalla
   container: {
     flex: 1,
     justifyContent: "center",
@@ -54,6 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fde2ea",
   },
 
+  // Título principal
   title: {
     fontSize: 28,
     fontWeight: "bold",
@@ -62,18 +88,21 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  // Texto descriptivo
   text: {
     textAlign: "center",
     marginBottom: 30,
     fontSize: 16,
+    lineHeight: 24,
   },
 
+  // Contenedor de botones
   buttons: {
     marginTop: 20,
     gap: 15,
   },
 
-  // Botón rosado principal
+  // Botón principal (rosado)
   button: {
     backgroundColor: "#e75480",
     paddingVertical: 12,
@@ -87,7 +116,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  // Botón con borde (atrás)
+  // Botón con borde (Atrás)
   buttonOutline: {
     borderWidth: 2,
     borderColor: "#e75480",

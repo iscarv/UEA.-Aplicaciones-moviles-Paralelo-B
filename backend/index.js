@@ -1,33 +1,39 @@
+// ================= CARGA DE ENTORNO =================
 // Cargar variables de entorno desde el archivo .env
 require("dotenv").config();
 
-// Importar Express para crear el servidor
-const express = require("express");
+// ================= IMPORTS =================
+const express = require("express");       // Servidor web
+const cors = require("cors");             // Permite solicitudes desde el frontend
+const authRoutes = require("./src/routes/auth.routes"); // Rutas de autenticación
 
-// Importar CORS para permitir peticiones desde el frontend
-const cors = require("cors");
-
-// Importar rutas de autenticación
-const authRoutes = require("./src/routes/auth.routes");
-
-// Inicializar la aplicación Express
+// ================= INICIALIZACIÓN DEL SERVIDOR =================
 const app = express();
+const PORT = process.env.PORT || 3000;   // Puerto configurable desde .env o 3000 por defecto
 
+// ================= MIDDLEWARES =================
 // Habilitar CORS para todas las rutas
 app.use(cors());
 
-// Permitir recibir y parsear JSON en el body de las solicitudes
+// Permite parsear JSON en las solicitudes entrantes
 app.use(express.json());
 
-// Registrar rutas de autenticación bajo el prefijo /api/auth
+// ================= RUTAS =================
+// Prefijo para todas las rutas de autenticación
 app.use("/api/auth", authRoutes);
 
-// Ruta raíz para verificar que la API está funcionando
+// Ruta raíz de prueba para verificar que la API funciona
 app.get("/", (req, res) => {
   res.json({ message: "BookNotes API funcionando 🚀" });
 });
 
-// Iniciar el servidor en el puerto definido en el .env
-app.listen(process.env.PORT, () => {
-  console.log("Servidor corriendo en puerto " + process.env.PORT);
+// Ruta de health check (útil para evidencias del taller o monitoreo)
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", timestamp: new Date() });
+});
+
+// ================= INICIO DEL SERVIDOR =================
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+  console.log(`Acceso desde navegador: http://localhost:${PORT}`);
 });

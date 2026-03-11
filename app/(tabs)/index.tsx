@@ -1,36 +1,52 @@
-// Importa Redirect para navegación automática
+// ================= IMPORTS =================
+
+// Permite redirigir automáticamente
 import { Redirect } from "expo-router";
 
-// AsyncStorage permite guardar datos localmente en el dispositivo
-// Aquí lo usamos para saber si el usuario ya vio el onboarding
+// AsyncStorage permite guardar datos en el dispositivo
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Hooks de React
 import { useEffect, useState } from "react";
 
+
 /*
-  Pantalla raíz de la aplicación.
+  ================= CONFIGURACIÓN =================
 
-  Su función es decidir automáticamente a dónde enviar al usuario:
+  Cambiar esta variable permite probar fácilmente el onboarding.
 
-   Si NO ha visto el onboarding → /onboarding/welcome
-   Si YA lo vio → /login
+  false → comportamiento normal de la app
+  true  → siempre mostrar onboarding (modo prueba)
+*/
 
-  Esto evita que el onboarding se repita cada vez que abre la app.
+const FORCE_ONBOARDING = false;
+
+
+
+/*
+  ================= PANTALLA RAÍZ =================
+
+  Decide automáticamente a dónde enviar al usuario:
+
+   - Si NO ha visto onboarding → /onboarding/welcome
+   - Si YA lo vio → /login
 */
 
 export default function Index() {
-  // Indica cuándo ya se leyó AsyncStorage
+
+  // Indica cuándo AsyncStorage terminó de cargar
   const [ready, setReady] = useState(false);
 
-  // Guarda si el onboarding ya fue visto
+  // Guarda si el usuario ya vio el onboarding
   const [seenOnboarding, setSeenOnboarding] = useState(false);
 
-  // Se ejecuta al cargar la app
+
+
+  // ================= CARGAR ESTADO =================
   useEffect(() => {
+
     const check = async () => {
-      
-           
+
       // Lee la bandera guardada en el dispositivo
       const seen = await AsyncStorage.getItem("seenOnboarding");
 
@@ -39,20 +55,35 @@ export default function Index() {
 
       // Marca que ya terminó de cargar
       setReady(true);
+
     };
 
     check();
+
   }, []);
 
-  // Mientras AsyncStorage carga, no se muestra nada
-  // Evita errores de navegación temprana
+
+
+  // ================= MODO PRUEBA =================
+  if (FORCE_ONBOARDING) {
+    return <Redirect href="/onboarding/welcome" />;
+  }
+
+
+
+  // ================= ESPERAR CARGA =================
   if (!ready) return null;
 
-  // Si el usuario ya vio el onboarding → login
+
+
+  // ================= DECISIÓN DE NAVEGACIÓN =================
+
+  // Si ya vio onboarding → login
   if (seenOnboarding) {
     return <Redirect href="/login" />;
   }
 
   // Si no lo ha visto → onboarding
   return <Redirect href="/onboarding/welcome" />;
+
 }

@@ -1,131 +1,147 @@
-// Importa el modelo de usuario para acceder a la base de datos
-const User = require("../models/user.model");
+// ================= AUTH CONTROLLER =================
+// Controlador de autenticación y gestión de usuarios
 
-// Librería para encriptar y comparar contraseñas
-const bcrypt = require("bcryptjs");
-
-// Librería para generar tokens JWT
-const jwt = require("jsonwebtoken");
+const User = require("../models/user.model"); // Modelo de usuario
+const bcrypt = require("bcryptjs");           // Para encriptar y comparar contraseñas
+const jwt = require("jsonwebtoken");          // Para generar JWT
 
 // ================= REGISTRO =================
 exports.register = async (req, res) => {
   try {
-    // Extrae los datos enviados desde el frontend
     let { name, email, password, role_id } = req.body;
 
-    // Elimina espacios en blanco al inicio y final
+    // Elimina espacios en blanco
     name = name?.trim();
     email = email?.trim();
 
-    // Valida que los campos obligatorios estén completos
+    // Validación de campos obligatorios
     if (!name || !email || !password) {
+      console.warn("Campos obligatorios faltantes:", { name, email, password });
       return res.status(400).json({ message: "Todos los campos son obligatorios" });
     }
 
-    // Verifica si el correo ya existe en la base de datos
-    const [existing] = await User.findByEmail(email);
-    if (existing.length) {
+    // Verifica si el correo ya existe
+    console.log("Verificando si el correo ya existe:", email);
+    const existing = await User.findByEmail(email); // Devuelve array de usuarios
+    if (Array.isArray(existing) && existing.length > 0) {
+      console.warn("Correo ya registrado:", email);
       return res.status(400).json({ message: "Correo ya registrado" });
     }
 
-    // Encripta la contraseña antes de guardarla
-    const hash = bcrypt.hashSync(password, 8);
+    // Encripta la contraseña de manera asíncrona (no bloquea el event loop)
+    console.log("Encriptando contraseña...");
+    const hash = await bcrypt.hash(password, 8);
 
-    // Crea el usuario en la base de datos con el rol recibido del frontend
+    // Crea el usuario en la base de datos
+    console.log("Creando usuario en la base de datos...");
     await User.create({
       name,
       email,
-      password: hash,
-      role_id: role_id || 1, // Si no llega rol, se asigna Usuario por defecto
+      password: hash,      // contraseña ya hasheada
+      role_id: role_id || 1, // rol por defecto si no se envía
     });
 
-    // Respuesta exitosa al frontend
-    res.status(201).json({ message: "Usuario registrado correctamente" });
+    console.log("Usuario registrado correctamente:", email);
+
+    // Devuelve mensaje de éxito para que el frontend redirija a login
+    res.status(201).json({
+      message: "Usuario registrado correctamente. Por favor inicie sesión."
+    });
 
   } catch (err) {
-    // Muestra el error en consola
-    console.error(err);
-
-    // Envía mensaje genérico de error
-    res.status(500).json({ message: "Error del servidor" });
+    console.error("Error en register:", err);
+    res.status(500).json({ message: "Error interno del servidor", error: err.message });
   }
 };
 
 // ================= LOGIN =================
 exports.login = async (req, res) => {
   try {
-    // Obtiene correo y contraseña enviados
     const { email, password } = req.body;
 
+    console.log("Intentando login para:", email);
+
     // Busca el usuario por correo
-    const [rows] = await User.findByEmail(email);
+    const rows = await User.findByEmail(email);
+    const user = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 
-    // Si no existe el usuario
-    if (!rows.length) {
+    if (!user) {
+      console.warn("Usuario no encontrado:", email);
       return res.status(401).json({ message: "Correo o contraseña incorrecta" });
     }
 
-    // Compara la contraseña ingresada con la encriptada
-    const valid = bcrypt.compareSync(password, rows[0].password);
-
-    // Si no coincide la contraseña
+    // Compara contraseña ingresada con la almacenada
+    const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
+      console.warn("Contraseña incorrecta para:", email);
       return res.status(401).json({ message: "Correo o contraseña incorrecta" });
     }
 
-    // Genera el token JWT con el id del usuario
+    // Genera token JWT
     const token = jwt.sign(
-      { id: rows[0].id },
+      { id: user.id, role_id: user.role_id },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
     );
 
-    // Devuelve el token al frontend
-    res.json({ token });
+    console.log("Login exitoso:", email);
+
+    res.json({
+      message: "Login exitoso",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role_id: user.role_id
+      }
+    });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error del servidor" });
+    console.error("Error en login:", err);
+    res.status(500).json({ message: "Error interno del servidor", error: err.message });
   }
 };
 
 // ================= PERFIL (ME) =================
 exports.me = async (req, res) => {
   try {
-    // Busca al usuario usando el id obtenido del token
-    const [rows] = await User.findById(req.user.id);
+    console.log("Obteniendo perfil del usuario ID:", req.user?.id);
 
-    // Si no se encuentra el usuario
-    if (!rows.length) {
+    const rows = await User.findById(req.user?.id);
+    const user = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+
+    if (!user) {
+      console.warn("Usuario no encontrado ID:", req.user?.id);
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // Construye el objeto de respuesta sin incluir contraseña
-    const user = {
-      id: rows[0].id,
-      name: rows[0].name,
-      email: rows[0].email,
-      role_id: rows[0].role_id,
-    };
-
-    // Envía los datos del usuario al frontend
-    res.json(user);
+    // Devuelve datos sin contraseña
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role_id: user.role_id
+    });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error del servidor" });
+    console.error("Error en me:", err);
+    res.status(500).json({ message: "Error interno del servidor", error: err.message });
   }
 };
 
-// ================= VALIDACIÓN ASÍNCRONA DE CORREO =================
+// ================= VALIDACIÓN DE CORREO =================
 exports.checkEmail = async (req, res) => {
-  // Obtiene el correo desde los parámetros de la URL
-  const email = req.params.email;
+  try {
+    const email = req.params.email;
+    console.log("Comprobando existencia de correo:", email);
 
-  // Busca si existe un usuario con ese correo
-  const [rows] = await User.findByEmail(email);
+    const rows = await User.findByEmail(email);
+    const exists = Array.isArray(rows) && rows.length > 0;
 
-  // Devuelve true si existe, false si no
-  res.json({ exists: rows.length > 0 });
+    res.json({ exists });
+  } catch (err) {
+    console.error("Error en checkEmail:", err);
+    res.status(500).json({ message: "Error al comprobar correo", error: err.message });
+  }
 };
-

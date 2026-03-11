@@ -1,3 +1,4 @@
+// ================= IMPORTS =================
 import api from "@/app/services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -7,10 +8,11 @@ import { Button, StyleSheet, Text, View } from "react-native";
 /*
   Pantalla protegida Home
 
-  Aquí solo entran usuarios autenticados.
-  Si no hay token → se muestra botón para ir al login.
+  Funciones principales:
+  - Solo usuarios autenticados pueden acceder
+  - Valida token y expiración guardada en AsyncStorage
+  - Permite cerrar sesión
 */
-
 export default function Home() {
   const router = useRouter();
 
@@ -23,37 +25,43 @@ export default function Home() {
   // Controla acceso no autorizado
   const [unauthorized, setUnauthorized] = useState(false);
 
-  /*
-    Al cargar Home:
-
-    - Lee token
-    - Si no existe → acceso denegado
-    - Si existe → consulta /auth/me
-  */
+  // ================= VALIDACIÓN TOKEN =================
   useEffect(() => {
     const checkAuth = async () => {
-      const token = await AsyncStorage.getItem("token");
-
-      // Si no hay token → no autorizado
-      if (!token) {
-        setUnauthorized(true);
-        setLoading(false);
-        return;
-      }
-
       try {
-        // Valida token con backend
-        const res = await api.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const token = await AsyncStorage.getItem("token");
+        const expiresStr = await AsyncStorage.getItem("token_expires");
 
-        setUser(res.data);
+        if (!token || !expiresStr) {
+          setUnauthorized(true);
+          return;
+        }
 
-      } catch {
-        // Token inválido → se elimina
-        await AsyncStorage.removeItem("token");
+        const expires = parseInt(expiresStr, 10);
+
+        if (isNaN(expires) || Date.now() > expires) {
+          // Token expirado o inválido → limpiar AsyncStorage
+          await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("token_expires");
+          setUnauthorized(true);
+          return;
+        }
+
+        // ================= PETICIÓN /auth/me =================
+        try {
+          const res = await api.get("/auth/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setUser(res.data);
+        } catch (err) {
+          console.error("Token inválido o error en /auth/me:", err);
+          await AsyncStorage.removeItem("token");
+          await AsyncStorage.removeItem("token_expires");
+          setUnauthorized(true);
+        }
+      } catch (err) {
+        console.error("Error verificando token:", err);
         setUnauthorized(true);
-
       } finally {
         setLoading(false);
       }
@@ -62,23 +70,13 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  /*
-    Vista cuando NO está autenticado
-  */
+  // ================= VISTA NO AUTORIZADO =================
   if (unauthorized) {
     return (
       <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title}>BookNotes 📚</Text>
-
-          <Text style={{ marginBottom: 15 }}>
-            Introduzca sus credenciales
-          </Text>
-
-          {/* ⚠️ IMPORTANTE:
-              NUNCA navegar a "/"
-              SIEMPRE directo a /login
-          */}
+          <Text style={{ marginBottom: 15 }}>Introduzca sus credenciales</Text>
           <Button
             title="Iniciar sesión"
             color="#e75480"
@@ -89,18 +87,13 @@ export default function Home() {
     );
   }
 
-  // Mientras valida token no muestra nada
+  // Mientras valida token o carga usuario
   if (loading || !user) return null;
 
-  /*
-    Cerrar sesión:
-
-    - Borra SOLO el token
-    - NO toca seenOnboarding
-    - Va directo al login
-  */
+  // ================= FUNCION LOGOUT =================
   const logout = async () => {
     await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("token_expires");
     router.replace("/login");
   };
 
@@ -110,9 +103,7 @@ export default function Home() {
         <Text style={styles.title}>BookNotes 📚</Text>
 
         <Text style={styles.text}>Bienvenid@ {user.name}</Text>
-
         <Text style={styles.sub}>Correo: {user.email}</Text>
-
         <Text style={styles.sub}>
           Rol: {user.role_id === 2 ? "Administrador" : "Usuario"}
         </Text>
@@ -123,8 +114,7 @@ export default function Home() {
   );
 }
 
-/* ================= ESTILOS ================= */
-
+// ================= ESTILOS =================
 const styles = StyleSheet.create({
   container: {
     flex: 1,

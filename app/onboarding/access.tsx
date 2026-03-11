@@ -1,7 +1,9 @@
+// ================= IMPORTS =================
+
 // Navegación con Expo Router
 import { useRouter } from "expo-router";
 
-// Persistencia local para guardar que el onboarding ya fue visto
+// Persistencia local para guardar estado de onboarding
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Componentes de React Native
@@ -15,61 +17,80 @@ import {
 /*
   Pantalla final del onboarding (Access)
 
-  Aquí el usuario decide:
-  - Crear cuenta
+  Aquí el usuario puede:
+  - Crear una cuenta
   - Iniciar sesión
 
   En ambos casos:
-  ✔ Se marca onboarding como visto
-  ✔ Se navega a la pantalla correspondiente
+  ✔ Se marca el onboarding como visto
+  ✔ Se redirige a la pantalla correspondiente
 */
 
 export default function Access() {
   const router = useRouter();
 
   /*
-    Termina onboarding y va a LOGIN
+    Guarda en AsyncStorage que el onboarding ya fue visto
+    Esto evita que vuelva a aparecer al reiniciar la app
+  */
+  const finishOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem("seenOnboarding", "true");
+    } catch (error) {
+      console.error("Error guardando seenOnboarding:", error);
+    }
+  };
+
+  /*
+    Termina onboarding y navega a LOGIN
   */
   const goToLogin = async () => {
-    // Marca onboarding como completado
-    await AsyncStorage.setItem("seenOnboarding", "true");
+    await finishOnboarding();
 
-    // Navega al login
+    // replace evita volver atrás al onboarding
     router.replace("/login");
   };
 
   /*
-    Termina onboarding y va a REGISTRO
+    Termina onboarding y navega a REGISTRO
   */
   const goToRegister = async () => {
-    // Marca onboarding como completado
-    await AsyncStorage.setItem("seenOnboarding", "true");
+    await finishOnboarding();
 
-    // Navega al registro
     router.replace("/register");
   };
 
   return (
     <View style={styles.container}>
-      {/* Título principal */}
+      {/* ================= TÍTULO ================= */}
       <Text style={styles.title}>Comienza ahora</Text>
 
-      {/* Texto descriptivo */}
+      {/* ================= DESCRIPCIÓN ================= */}
       <Text style={styles.text}>
         Crea tu cuenta o inicia sesión para empezar a registrar tus lecturas.
       </Text>
 
-      {/* Contenedor de botones */}
+      {/* ================= BOTONES ================= */}
       <View style={styles.buttons}>
+
         {/* BOTÓN CREAR CUENTA */}
-        <TouchableOpacity style={styles.button} onPress={goToRegister}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={goToRegister}
+          accessibilityLabel="Crear una nueva cuenta"
+        >
           <Text style={styles.buttonText}>Crear cuenta</Text>
         </TouchableOpacity>
 
         {/* BOTÓN INICIAR SESIÓN */}
-        <TouchableOpacity style={styles.buttonOutline} onPress={goToLogin}>
+        <TouchableOpacity
+          style={styles.buttonOutline}
+          onPress={goToLogin}
+          accessibilityLabel="Ir a iniciar sesión"
+        >
           <Text style={styles.buttonOutlineText}>Iniciar sesión</Text>
         </TouchableOpacity>
+
       </View>
     </View>
   );
@@ -78,6 +99,7 @@ export default function Access() {
 /* ================= ESTILOS ================= */
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     justifyContent: "center",
@@ -104,7 +126,7 @@ const styles = StyleSheet.create({
     gap: 15,
   },
 
-  // Botón rosado principal
+  // Botón principal
   button: {
     backgroundColor: "#e75480",
     paddingVertical: 12,
@@ -118,7 +140,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  // Botón con borde
+  // Botón secundario
   buttonOutline: {
     borderWidth: 2,
     borderColor: "#e75480",
@@ -132,6 +154,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+
 });
 
 
