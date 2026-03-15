@@ -13,10 +13,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // ================= BASE URL =================
 
 /*
-  Definimos la URL del backend dependiendo de la plataforma.
+Definimos la URL del backend dependiendo de la plataforma.
 
-  - Web → localhost
-  - Móvil → IP local del backend
+WEB:
+http://localhost:3000
+
+MÓVIL (Expo Go):
+usar la IP local del backend
 */
 
 const baseURL =
@@ -28,19 +31,31 @@ const baseURL =
 // ================= INSTANCIA AXIOS =================
 
 /*
-  Creamos una instancia personalizada de axios
-  que usaremos en toda la aplicación.
+Creamos una instancia personalizada de axios
+para usarla en toda la aplicación.
+
+⚠ IMPORTANTE
+
+NO definir "Content-Type": "application/json"
+
+porque cuando enviamos imágenes usando FormData,
+Axios necesita establecer automáticamente:
+
+multipart/form-data
+
+Si se fija manualmente application/json,
+Multer en el backend NO recibe el archivo.
 */
 
 const api = axios.create({
   baseURL,
 
-  // Tiempo máximo de espera de una petición
+  // Tiempo máximo de espera de la petición
   timeout: 10000,
 
   // Headers por defecto
   headers: {
-    "Content-Type": "application/json",
+    Accept: "application/json", // Solo indicamos que esperamos JSON
   },
 });
 
@@ -48,11 +63,15 @@ const api = axios.create({
 // ================= INTERCEPTOR REQUEST =================
 
 /*
-  Este interceptor se ejecuta antes de cada petición.
+Este interceptor se ejecuta antes de cada petición.
 
-  Su función es:
-  - Obtener el token guardado en AsyncStorage
-  - Agregarlo al header Authorization
+Su función es:
+
+1️⃣ Obtener el token guardado en AsyncStorage
+2️⃣ Agregarlo al header Authorization
+
+Esto permite que todas las rutas protegidas
+del backend reciban el token JWT.
 */
 
 api.interceptors.request.use(
@@ -60,18 +79,24 @@ api.interceptors.request.use(
 
     try {
 
+      // Obtener token almacenado
       const token = await AsyncStorage.getItem("token");
 
+      // Si existe token lo agregamos al header
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
 
     } catch (err) {
+
       console.error("Error obteniendo token:", err);
+
     }
 
     return config;
+
   },
+
   (error) => {
     return Promise.reject(error);
   }
@@ -81,14 +106,21 @@ api.interceptors.request.use(
 // ================= INTERCEPTOR RESPONSE =================
 
 /*
-  Este interceptor maneja respuestas del servidor.
+Este interceptor maneja respuestas del servidor.
 
-  Ejemplo:
-  Si el backend responde 401 (token inválido o expirado),
-  podemos limpiar sesión automáticamente.
+Ejemplo de uso:
+
+Si el backend responde 401 significa:
+
+✔ token expirado
+✔ token inválido
+✔ usuario no autenticado
+
+En ese caso limpiamos la sesión automáticamente.
 */
 
 api.interceptors.response.use(
+
   (response) => response,
 
   async (error) => {
@@ -97,20 +129,22 @@ api.interceptors.response.use(
 
       console.warn("Token inválido o expirado");
 
-      // Limpiar sesión
+      // Eliminar token guardado
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("token_expires");
 
-      // Aquí normalmente redirigiríamos a login
-      // pero eso se controla desde index.tsx
+      // La redirección al login se controla
+      // desde index.tsx en el frontend
     }
 
     return Promise.reject(error);
   }
+
 );
 
 
 // ================= EXPORT =================
 
-// Exportamos la instancia para usarla en toda la app
+// Exportamos la instancia de axios
+// para usarla en todos los servicios de la app
 export default api;

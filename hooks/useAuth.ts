@@ -1,5 +1,5 @@
 // Importa la instancia de axios configurada para llamar al backend
-import api from "@/app/services/api";
+import api from "@/services/api";
 
 // Importa hook de estado de React
 import { useState } from "react";

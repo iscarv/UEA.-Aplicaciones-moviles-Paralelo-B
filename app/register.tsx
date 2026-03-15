@@ -1,7 +1,7 @@
 // ================= IMPORTS =================
 
 // API para conectar con el backend
-import api from "@/app/services/api";
+import api from "@/services/api";
 
 // Selector de rol
 import { Picker } from "@react-native-picker/picker";

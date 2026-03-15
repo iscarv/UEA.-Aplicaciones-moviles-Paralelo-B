@@ -1,7 +1,7 @@
 // ================= IMPORTS =================
 
 // Instancia de axios configurada para conectarse al backend
-import api from "@/app/services/api";
+import api from "@/services/api";
 
 // AsyncStorage permite guardar datos localmente en el dispositivo
 import AsyncStorage from "@react-native-async-storage/async-storage";
