@@ -27,7 +27,7 @@ export default function EditBookScreen() {
 
   const id = getParam(params.id);
 
-  // 🔥 FIX: evitar AxiosError por ID vacío
+  // FIX: evitar AxiosError por ID vacío
   if (!id) {
     Alert.alert("Error", "ID del libro no válido");
     router.back();
@@ -100,7 +100,7 @@ export default function EditBookScreen() {
         } as any);
       }
 
-      // 🔥 FIX: update con token (desde service)
+      // FIX: update con token (desde service)
       await updateBook(id, formData);
 
       Alert.alert("Éxito", "Libro actualizado correctamente");
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 12, // 🔥 más redondeado
+    borderRadius: 12, // más redondeado
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#ddd"

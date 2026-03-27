@@ -64,7 +64,7 @@ router.delete(
 );
 
 
-// ---------------- ACTUALIZAR LIBRO (🔥 NUEVO) ----------------
+// ---------------- ACTUALIZAR LIBRO ----------------
 router.put(
   "/:id",
   authMiddleware,

@@ -34,7 +34,7 @@ function authMiddleware(req, res, next) {
 
   const authHeader = req.headers.authorization;
 
-  // 🔥 DEBUG CLAVE (ver si llega desde el frontend)
+  // DEBUG CLAVE (ver si llega desde el frontend)
   console.log("HEADER AUTH:", authHeader);
 
 
@@ -68,7 +68,7 @@ function authMiddleware(req, res, next) {
 
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 🔥 DEBUG (ver si el token es válido)
+    // DEBUG (ver si el token es válido)
     console.log("✅ TOKEN VÁLIDO:", payload);
 
 

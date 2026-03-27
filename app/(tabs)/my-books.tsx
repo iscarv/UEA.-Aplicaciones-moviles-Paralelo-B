@@ -59,7 +59,7 @@ export default function MyBooksScreen() {
 
 
   // =====================================================
-  // 🔥 REFRESCO AUTOMÁTICO AL VOLVER A LA PANTALLA
+  // REFRESCO AUTOMÁTICO AL VOLVER A LA PANTALLA
   // =====================================================
 
   useFocusEffect(
@@ -144,7 +144,7 @@ export default function MyBooksScreen() {
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.author}>{item.author}</Text>
 
-          {/* 🔥 BOTONES MEJORADOS */}
+          {/*  BOTONES MEJORADOS */}
           <View style={styles.actions}>
 
             <TouchableOpacity
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
-  // 🔥 NUEVOS ESTILOS BOTONES
+  // NUEVOS ESTILOS BOTONES
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
