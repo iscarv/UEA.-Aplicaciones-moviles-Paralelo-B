@@ -5,189 +5,168 @@
 const Book = require("../models/book.model");
 
 
-/*
-====================================================
-CONTROLADOR DE LIBROS
-====================================================
-
-Funciones disponibles:
-
-✔ createBook
-✔ getBooks
-✔ deleteBook
-*/
-
-
 // ============================================================
 // CREAR LIBRO
 // ============================================================
 
-exports.createBook = (req, res) => {
+exports.createBook = async (req, res) => {
 
-  console.log("Petición createBook recibida");
+  console.log("📩 Petición createBook recibida");
+  console.log("REQ.USER:", req.user);
 
   try {
 
     const { title, author } = req.body;
+    const user_id = req.user?.id;
 
-    const user_id = req.user.id;
-
-
-    // ================= VALIDACIÓN =================
+    if (!user_id) {
+      console.log("❌ Usuario no autenticado");
+      return res.status(401).json({ message: "Usuario no autenticado" });
+    }
 
     if (!title || !author) {
-
       return res.status(400).json({
         message: "Título y autor son obligatorios"
       });
-
     }
-
-
-    // ================= IMAGEN =================
 
     let imagePath = null;
 
     if (req.file) {
-
       imagePath = "/uploads/" + req.file.filename;
-
-      console.log("Imagen subida:", imagePath);
-
+      console.log("🖼 Imagen subida:", imagePath);
     }
 
+    const result = await Book.createBook({
+      title,
+      author,
+      image: imagePath,
+      user_id
+    });
 
-    // ================= GUARDAR LIBRO =================
-
-    Book.createBook(
-
-      {
-        title,
-        author,
-        image: imagePath,
-        user_id
-      },
-
-      (err, result) => {
-
-        if (err) {
-
-          console.error("Error DB:", err);
-
-          return res.status(500).json({
-            message: "Error en base de datos"
-          });
-
-        }
-
-
-        // ================= RESPUESTA =================
-
-        res.status(201).json({
-          message: "Libro creado correctamente",
-          id: result.insertId,
-          image: imagePath
-        });
-
-      }
-
-    );
+    return res.status(201).json({
+      success: true,
+      message: "Libro creado correctamente",
+      id: result.insertId,
+      image: imagePath
+    });
 
   } catch (error) {
 
-    console.error("Error en createBook:", error);
+    console.error("❌ Error createBook:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error interno del servidor"
     });
-
   }
-
 };
-
 
 
 // ============================================================
 // OBTENER LIBROS
 // ============================================================
 
-exports.getBooks = (req, res) => {
+exports.getBooks = async (req, res) => {
 
-  const user_id = req.user.id;
+  try {
 
-  console.log("Obteniendo libros del usuario:", user_id);
+    const user_id = req.user?.id;
 
+    console.log("📚 Obteniendo libros del usuario:", user_id);
 
-  Book.getBooksByUser(user_id, (err, books) => {
+    const books = await Book.getBooksByUser(user_id);
 
-    if (err) {
+    console.log("📦 Libros encontrados:", books.length);
 
-      console.error("Error obteniendo libros:", err);
+    return res.json(books);
 
-      return res.status(500).json({
-        message: "Error obteniendo libros"
-      });
+  } catch (err) {
 
-    }
+    console.error("❌ Error getBooks:", err);
 
-
-    /*
-    =====================================================
-    CORRECCIÓN SEGURA PARA IMÁGENES
-    =====================================================
-
-    Creamos un nuevo arreglo con URLs completas
-    sin modificar los datos originales.
-    */
-
-    const host = req.protocol + "://" + req.headers.host;
-
-    const booksFormatted = books.map((book) => ({
-
-      ...book,
-
-      image: book.image
-        ? host + book.image
-        : null
-
-    }));
-
-
-    res.json(booksFormatted);
-
-  });
-
+    return res.status(500).json({
+      message: "Error obteniendo libros"
+    });
+  }
 };
-
 
 
 // ============================================================
 // ELIMINAR LIBRO
 // ============================================================
 
-exports.deleteBook = (req, res) => {
+exports.deleteBook = async (req, res) => {
 
-  const { id } = req.params;
+  try {
 
-  console.log("Eliminando libro ID:", id);
+    const { id } = req.params;
 
+    console.log("🗑 Eliminando libro ID:", id);
 
-  Book.deleteBook(id, (err) => {
+    await Book.deleteBook(id);
 
-    if (err) {
-
-      console.error("Error eliminando libro:", err);
-
-      return res.status(500).json({
-        message: "Error eliminando libro"
-      });
-
-    }
-
-    res.json({
+    return res.json({
+      success: true,
       message: "Libro eliminado correctamente"
     });
 
-  });
+  } catch (err) {
+
+    console.error("❌ Error deleteBook:", err);
+
+    return res.status(500).json({
+      message: "Error eliminando libro"
+    });
+  }
+};
+
+
+// ============================================================
+// ACTUALIZAR LIBRO
+// ============================================================
+
+exports.updateBook = async (req, res) => {
+
+  console.log("✏️ updateBook request");
+
+  try {
+
+    const { id } = req.params;
+    const { title, author } = req.body;
+
+    const user_id = req.user?.id;
+
+    if (!user_id) {
+      console.log("❌ Usuario no autenticado");
+      return res.status(401).json({ message: "Usuario no autenticado" });
+    }
+
+    let imagePath = null;
+
+    if (req.file) {
+      imagePath = "/uploads/" + req.file.filename;
+      console.log("🖼 Nueva imagen:", imagePath);
+    }
+
+    await Book.updateBook(id, {
+      title,
+      author,
+      image: imagePath
+    });
+
+    return res.json({
+      success: true,
+      message: "Libro actualizado correctamente"
+    });
+
+  } catch (error) {
+
+    console.error("❌ Error updateBook:", error);
+
+    return res.status(500).json({
+      message: "Error actualizando libro"
+    });
+
+  }
 
 };

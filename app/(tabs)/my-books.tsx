@@ -7,17 +7,16 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   Alert,
-  Button,
   FlatList,
   Image,
   StyleSheet,
   Text,
-  View,
+  TouchableOpacity,
+  View
 } from "react-native";
 
-// Servicios para comunicarse con el backend
+// Servicios backend
 import { deleteBook, getBooks } from "../../services/bookService";
-
 
 
 // =====================================================
@@ -28,16 +27,12 @@ export default function MyBooksScreen() {
 
   const router = useRouter();
 
-  // estado donde guardamos los libros
   const [books, setBooks] = useState<any[]>([]);
-
-  // estado de carga
   const [loading, setLoading] = useState(true);
 
 
-
   // =====================================================
-  // CARGAR LIBROS DESDE EL BACKEND
+  // CARGAR LIBROS
   // =====================================================
 
   const loadBooks = async () => {
@@ -46,14 +41,13 @@ export default function MyBooksScreen() {
 
       const data = await getBooks();
 
-      // Log útil para depurar si algo falla
-      console.log("Libros recibidos:", data);
+      console.log("📚 Libros recibidos:", data);
 
-      setBooks(data);
+      setBooks(Array.isArray(data) ? data : []);
 
     } catch (error) {
 
-      console.error("Error cargando libros:", error);
+      console.error("❌ Error cargando libros:", error);
 
     } finally {
 
@@ -64,24 +58,15 @@ export default function MyBooksScreen() {
   };
 
 
-
-  /*
-  =====================================================
-  useFocusEffect
-  =====================================================
-
-  Esta función hace que la pantalla se actualice
-  cada vez que volvemos desde "Agregar libro".
-
-  Así los libros nuevos aparecen automáticamente.
-  */
+  // =====================================================
+  // 🔥 REFRESCO AUTOMÁTICO AL VOLVER A LA PANTALLA
+  // =====================================================
 
   useFocusEffect(
     useCallback(() => {
       loadBooks();
     }, [])
   );
-
 
 
   // =====================================================
@@ -103,12 +88,11 @@ export default function MyBooksScreen() {
 
             await deleteBook(id);
 
-            // recargar lista después de eliminar
             loadBooks();
 
           } catch (error) {
 
-            console.error("Error eliminando libro:", error);
+            console.error("❌ Error eliminando libro:", error);
 
           }
 
@@ -121,37 +105,23 @@ export default function MyBooksScreen() {
   };
 
 
-
-  /*
-  =====================================================
-  FUNCIÓN PARA CORREGIR URL DE IMÁGENES
-  =====================================================
-
-  El backend puede devolver:
-
-  /uploads/imagen.jpg
-
-  Entonces lo convertimos en:
-
-  http://192.168.100.10:3000/uploads/imagen.jpg
-  */
+  // =====================================================
+  // URL IMAGEN
+  // =====================================================
 
   const getImageUrl = (image?: string) => {
 
     if (!image) return undefined;
 
-    // Si ya es URL completa no la modificamos
     if (image.startsWith("http")) return image;
 
-    // Convertimos ruta relativa a URL completa
     return `http://192.168.100.10:3000${image}`;
 
   };
 
 
-
   // =====================================================
-  // RENDER DE CADA LIBRO
+  // RENDER ITEM
   // =====================================================
 
   const renderItem = ({ item }: { item: any }) => {
@@ -162,44 +132,41 @@ export default function MyBooksScreen() {
 
       <View style={styles.card}>
 
-        {/* 
-        Mostrar imagen SOLO si existe URL válida
-        Esto evita errores en React Native Image
-        */}
-        {imageUrl ? (
+        {imageUrl && (
           <Image
             source={{ uri: imageUrl }}
             style={styles.image}
           />
-        ) : null}
+        )}
 
-
-        {/* Contenedor de información */}
         <View style={{ flex: 1 }}>
 
           <Text style={styles.title}>{item.title}</Text>
-
           <Text style={styles.author}>{item.author}</Text>
 
+          {/* 🔥 BOTONES MEJORADOS */}
+          <View style={styles.actions}>
 
-          {/* Botón eliminar */}
-          <Button
-            title="Eliminar"
-            color="#e75480"
-            onPress={() => handleDelete(item.id)}
-          />
+            <TouchableOpacity
+              style={styles.editBtn}
+              onPress={() =>
+                router.push({
+                  pathname: "/edit-book",
+                  params: { ...item },
+                })
+              }
+            >
+              <Text style={styles.btnText}>Editar</Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={() => handleDelete(item.id)}
+            >
+              <Text style={styles.btnText}>Eliminar</Text>
+            </TouchableOpacity>
 
-          {/* Botón editar */}
-          <Button
-            title="Editar"
-            onPress={() =>
-              router.push({
-                pathname: "/edit-book",
-                params: { ...item },
-              })
-            }
-          />
+          </View>
 
         </View>
 
@@ -210,53 +177,37 @@ export default function MyBooksScreen() {
   };
 
 
-
   // =====================================================
-  // ESTADO DE CARGA
+  // LOADING
   // =====================================================
 
   if (loading) {
-
     return (
       <View style={styles.container}>
         <Text>Cargando libros...</Text>
       </View>
     );
-
   }
 
 
-
   // =====================================================
-  // LISTA VACÍA
+  // VACÍO
   // =====================================================
 
   if (books.length === 0) {
-
     return (
-
       <View style={styles.container}>
-
         <Text style={styles.header}>Mis Libros 📚</Text>
-
         <Text style={styles.empty}>
-          📚 Aún no tienes libros guardados
+          📚 Aún no tienes libros
         </Text>
-
-        <Text style={styles.emptySub}>
-          Agrega uno en "Agregar libro"
-        </Text>
-
       </View>
-
     );
-
   }
 
 
-
   // =====================================================
-  // LISTA DE LIBROS
+  // LISTA
   // =====================================================
 
   return (
@@ -269,9 +220,6 @@ export default function MyBooksScreen() {
         data={books}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-
-        // mejora visual cuando hay pocos elementos
-        contentContainerStyle={{ paddingBottom: 40 }}
       />
 
     </View>
@@ -279,7 +227,6 @@ export default function MyBooksScreen() {
   );
 
 }
-
 
 
 // =====================================================
@@ -305,17 +252,17 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    padding: 10,
+    padding: 12,
     marginBottom: 15,
-    borderRadius: 10,
-    elevation: 2,
+    borderRadius: 14,
+    elevation: 3,
   },
 
   image: {
     width: 70,
     height: 100,
-    borderRadius: 6,
-    marginRight: 10,
+    borderRadius: 8,
+    marginRight: 12,
   },
 
   title: {
@@ -328,16 +275,38 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
+  // 🔥 NUEVOS ESTILOS BOTONES
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10
+  },
+
+  editBtn: {
+    backgroundColor: "#efa0b4",
+    padding: 10,
+    borderRadius: 14,
+    width: "48%",
+    alignItems: "center"
+  },
+
+  deleteBtn: {
+    backgroundColor: "#ff4d6d",
+    padding: 10,
+    borderRadius: 14,
+    width: "48%",
+    alignItems: "center"
+  },
+
+  btnText: {
+    color: "#fff",
+    fontWeight: "bold"
+  },
+
   empty: {
     textAlign: "center",
     fontSize: 18,
     marginTop: 40,
-  },
-
-  emptySub: {
-    textAlign: "center",
-    marginTop: 10,
-    color: "#666",
-  },
+  }
 
 });

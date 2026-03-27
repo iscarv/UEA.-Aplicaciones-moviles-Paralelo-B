@@ -2,11 +2,11 @@
 import React, { useState } from "react";
 import {
   Alert,
-  Button,
   Image,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View
 } from "react-native";
 
@@ -14,44 +14,37 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { updateBook } from "../services/bookService";
 
+
+// ================= SCREEN =================
 export default function EditBookScreen() {
 
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  /*
-  ====================================================
-  FUNCIÓN PARA CONVERTIR PARÁMETROS A STRING
-  ====================================================
-  Expo Router devuelve:
-  string | string[] | undefined
-
-  Esta función lo convierte a string seguro
-  */
-
+  // ================= SAFE PARAM =================
   const getParam = (p: string | string[] | undefined): string =>
     Array.isArray(p) ? p[0] : p ?? "";
 
-  /*
-  ====================================================
-  ESTADOS
-  ====================================================
-  */
-
   const id = getParam(params.id);
 
-  const [title, setTitle] = useState<string>(getParam(params.title));
-  const [author, setAuthor] = useState<string>(getParam(params.author));
-  const [image, setImage] = useState<string | null>(getParam(params.image) || null);
+  // 🔥 FIX: evitar AxiosError por ID vacío
+  if (!id) {
+    Alert.alert("Error", "ID del libro no válido");
+    router.back();
+    return null;
+  }
+
+  // ================= STATES =================
+  const [title, setTitle] = useState(getParam(params.title));
+  const [author, setAuthor] = useState(getParam(params.author));
+  const [image, setImage] = useState<string | null>(
+    getParam(params.image) || null
+  );
 
   const [saving, setSaving] = useState(false);
 
 
-  /*
-  ====================================================
-  ELEGIR IMAGEN
-  ====================================================
-  */
+  // ================= PICK IMAGE =================
   const pickImage = async () => {
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -69,19 +62,14 @@ export default function EditBookScreen() {
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
-
   };
 
 
-  /*
-  ====================================================
-  GUARDAR CAMBIOS
-  ====================================================
-  */
+  // ================= SAVE BOOK =================
   const saveBook = async () => {
 
     if (!title || !author) {
-      Alert.alert("Debe ingresar título y autor");
+      Alert.alert("Error", "Debe ingresar título y autor");
       return;
     }
 
@@ -94,9 +82,7 @@ export default function EditBookScreen() {
       formData.append("title", title);
       formData.append("author", author);
 
-      /*
-      Si la imagen es nueva (viene del teléfono)
-      */
+      // ================= IMAGE HANDLING =================
       if (image && image.startsWith("file")) {
 
         const filename = image.split("/").pop() || "photo.jpg";
@@ -107,45 +93,34 @@ export default function EditBookScreen() {
           ? `image/${match[1]}`
           : "image/jpeg";
 
-        formData.append(
-          "image",
-          {
-            uri: image,
-            name: filename,
-            type
-          } as any
-        );
-
+        formData.append("image", {
+          uri: image,
+          name: filename,
+          type
+        } as any);
       }
 
+      // 🔥 FIX: update con token (desde service)
       await updateBook(id, formData);
 
-      Alert.alert("Libro actualizado");
+      Alert.alert("Éxito", "Libro actualizado correctamente");
 
       router.back();
 
     } catch (error) {
 
-      console.log(error);
+      console.log("❌ ERROR UPDATE:", error);
 
-      Alert.alert("Error actualizando libro");
+      Alert.alert("Error", "No se pudo actualizar el libro");
 
     } finally {
-
       setSaving(false);
-
     }
-
   };
 
 
-  /*
-  ====================================================
-  INTERFAZ
-  ====================================================
-  */
+  // ================= UI =================
   return (
-
     <View style={styles.container}>
 
       <Text style={styles.title}>Editar Libro 📚</Text>
@@ -165,37 +140,30 @@ export default function EditBookScreen() {
       />
 
       {image && (
-        <Image
-          source={{ uri: image }}
-          style={styles.image}
-        />
+        <Image source={{ uri: image }} style={styles.image} />
       )}
 
-      <Button
-        title="Cambiar imagen"
-        onPress={pickImage}
-      />
+      {/* ================= BUTTONS ================= */}
 
-      <View style={{ height: 20 }} />
+      <TouchableOpacity style={styles.button} onPress={pickImage}>
+        <Text style={styles.buttonText}>Cambiar imagen</Text>
+      </TouchableOpacity>
 
-      <Button
-        title={saving ? "Guardando..." : "Guardar cambios"}
+      <TouchableOpacity
+        style={[styles.button, styles.saveButton]}
         onPress={saveBook}
-        color="#e75480"
-      />
+      >
+        <Text style={[styles.buttonText, { color: "#fff" }]}>
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </Text>
+      </TouchableOpacity>
 
     </View>
-
   );
 }
 
 
-/*
-====================================================
-ESTILOS
-====================================================
-*/
-
+// ================= STYLES =================
 const styles = StyleSheet.create({
 
   container: {
@@ -215,7 +183,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12, // 🔥 más redondeado
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#ddd"
@@ -226,7 +194,25 @@ const styles = StyleSheet.create({
     height: 260,
     alignSelf: "center",
     marginTop: 20,
-    borderRadius: 8
+    borderRadius: 12
+  },
+
+  // ================= BUTTON STYLE =================
+  button: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 10
+  },
+
+  saveButton: {
+    backgroundColor: "#e75480"
+  },
+
+  buttonText: {
+    fontWeight: "bold",
+    color: "#e75480"
   }
 
 });

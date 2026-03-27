@@ -2,32 +2,20 @@
 // IMPORTS
 // ======================================================
 
-// Permite guardar y leer el token JWT en el dispositivo
+// AsyncStorage para manejar el token JWT
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Permite detectar si la app corre en web o en móvil
+// Detectar plataforma (web / móvil)
 import { Platform } from "react-native";
 
-// Instancia personalizada de Axios configurada en api.ts
+// Instancia Axios configurada (baseURL)
 import api from "./api";
 
 
-/*
-====================================================
-BOOK SERVICE
-====================================================
-
-Este archivo centraliza todas las operaciones
-relacionadas con los libros:
-
-✔ Crear libro (con imagen)
-✔ Obtener libros del usuario
-✔ Eliminar libro
-✔ Editar libro
-
-Todas las peticiones incluyen el token JWT
-para autenticar al usuario en el backend.
-*/
+// ======================================================
+// BOOK SERVICE
+// ======================================================
+// CRUD de libros centralizado
 
 
 // ======================================================
@@ -35,50 +23,43 @@ para autenticar al usuario en el backend.
 // ======================================================
 export const createBook = async (formData) => {
 
+  const token = await AsyncStorage.getItem("token");
+
+  console.log("📤 Enviando libro al backend...");
+
   try {
 
-    // Obtener token almacenado
-    const token = await AsyncStorage.getItem("token");
-
-    console.log("📤 Enviando libro al backend...");
-
-    /*
-    IMPORTANTE
-
-    Cuando enviamos imágenes usamos FormData,
-    por lo que el Content-Type debe ser:
-
-    multipart/form-data
-
-    Esto permite que Multer en el backend
-    reciba correctamente el archivo en req.file
-    */
-
-    const response = await api.post("/books", formData, {
-
+    const response = await fetch(`${api.defaults.baseURL}/books`, {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-
-        // ⚠ Necesario para React Native + imágenes
-        "Content-Type": "multipart/form-data",
       },
-
+      body: formData,
     });
 
-    console.log("📥 Respuesta backend:", response.data);
+    console.log("📡 STATUS:", response.status);
 
-    return response.data;
+    const text = await response.text();
+
+    console.log("📥 RESPUESTA RAW:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.log("⚠️ Error parseando JSON:", e.message);
+      data = null;
+    }
+
+    return data || { success: false };
 
   } catch (error) {
 
-    console.log(
-      "❌ Error creando libro:",
-      error.response?.data || error.message
-    );
+    console.log("❌ ERROR FETCH:", error.message);
 
-    throw error;
+    return { success: false };
+
   }
-
 };
 
 
@@ -89,31 +70,38 @@ export const getBooks = async () => {
 
   try {
 
-    // Obtener token guardado
     const token = await AsyncStorage.getItem("token");
 
+    console.log("🔑 TOKEN:", token);
     console.log("📚 Solicitando libros al backend...");
 
-    const res = await api.get("/books", {
-
+    const response = await fetch(`${api.defaults.baseURL}/books`, {
+      method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
-
     });
 
-    console.log("📥 Libros recibidos:", res.data);
+    const text = await response.text();
 
-    return res.data;
+    console.log("📥 Libros RAW:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = [];
+    }
+
+    return Array.isArray(data) ? data : [];
 
   } catch (error) {
 
-    console.error("❌ Error obteniendo libros:", error);
+    console.log("❌ Error GET books:", error.message);
 
-    throw error;
+    return [];
 
   }
-
 };
 
 
@@ -129,11 +117,9 @@ export const deleteBook = async (id) => {
     console.log("🗑 Eliminando libro:", id);
 
     await api.delete(`/books/${id}`, {
-
       headers: {
         Authorization: `Bearer ${token}`,
       },
-
     });
 
   } catch (error) {
@@ -143,59 +129,56 @@ export const deleteBook = async (id) => {
     throw error;
 
   }
-
 };
 
 
 // ======================================================
-// EDITAR LIBRO
+// EDITAR LIBRO (FIX CON FETCH)
 // ======================================================
-export const updateBook = async (id, data) => {
+export const updateBook = async (id, formData) => {
+
+  const token = await AsyncStorage.getItem("token");
+
+  console.log("✏️ Actualizando libro:", id);
 
   try {
 
-    const token = await AsyncStorage.getItem("token");
-
-    console.log("✏️ Actualizando libro:", id);
-
-    /*
-    Igual que al crear libro,
-    si enviamos imagen debemos usar multipart/form-data
-    */
-
-    const res = await api.put(`/books/${id}`, data, {
-
+    const response = await fetch(`${api.defaults.baseURL}/books/${id}`, {
+      method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
       },
-
+      body: formData,
     });
 
-    return res.data;
+    console.log("📡 STATUS UPDATE:", response.status);
+
+    const text = await response.text();
+
+    console.log("📥 RESPUESTA RAW UPDATE:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+
+    return data || { success: false };
 
   } catch (error) {
 
-    console.error("❌ Error actualizando libro:", error);
+    console.log("❌ ERROR UPDATE FETCH:", error.message);
 
-    throw error;
+    return { success: false };
 
   }
-
 };
 
 
 // ======================================================
-// FUNCIÓN AUXILIAR PARA NORMALIZAR URI DE IMAGEN
+// NORMALIZAR IMAGEN (iOS FIX)
 // ======================================================
-
-/*
-En iOS las rutas de archivo incluyen "file://"
-y algunas librerías no lo aceptan.
-
-Esta función elimina ese prefijo cuando es necesario.
-*/
-
 export const normalizeImageUri = (image) => {
 
   return Platform.OS === "ios"

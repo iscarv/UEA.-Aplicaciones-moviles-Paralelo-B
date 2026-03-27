@@ -1,51 +1,99 @@
-// Importa la librería JWT para verificar tokens
+// ============================================================
+// IMPORTS
+// ============================================================
+
+// Librería para trabajar con JWT (tokens)
 const jwt = require("jsonwebtoken");
 
-// Carga las variables de entorno definidas en el archivo .env
+// Cargar variables de entorno (.env)
 require("dotenv").config();
 
-/*
-================= MIDDLEWARE DE AUTENTICACIÓN =================
 
-Este middleware protege rutas privadas verificando el JWT enviado
-por el cliente. Se usa en rutas que requieren usuario autenticado.
+/*
+====================================================
+MIDDLEWARE DE AUTENTICACIÓN
+====================================================
+
+Este middleware protege rutas privadas verificando el JWT.
 
 Flujo:
-1. Verifica que exista el header Authorization y comience con "Bearer "
-2. Extrae el token
-3. Verifica el token con la clave secreta definida en .env
-4. Si es válido, agrega el payload a req.user
-5. Si falla, responde 401 con mensaje de error
+1. Lee el header Authorization
+2. Verifica que exista y tenga formato "Bearer TOKEN"
+3. Extrae el token
+4. Valida el token con JWT_SECRET
+5. Si es válido → agrega req.user
+6. Si falla → responde 401
 */
+
+
 function authMiddleware(req, res, next) {
-  // Obtiene el header Authorization enviado desde el frontend
-  // Ejemplo esperado: "Authorization: Bearer <token>"
+
+  // ============================================================
+  // OBTENER HEADER
+  // ============================================================
+
   const authHeader = req.headers.authorization;
 
-  // Si no existe el header o no inicia con "Bearer " → acceso denegado
+  // 🔥 DEBUG CLAVE (ver si llega desde el frontend)
+  console.log("HEADER AUTH:", authHeader);
+
+
+  // ============================================================
+  // VALIDAR HEADER
+  // ============================================================
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "No autorizado: Token requerido" });
+
+    console.log("❌ No llegó token o formato incorrecto");
+
+    return res.status(401).json({
+      message: "No autorizado: Token requerido"
+    });
+
   }
 
-  // Extrae únicamente el token eliminando la palabra "Bearer"
+
+  // ============================================================
+  // EXTRAER TOKEN
+  // ============================================================
+
   const token = authHeader.split(" ")[1];
 
+
+  // ============================================================
+  // VERIFICAR TOKEN
+  // ============================================================
+
   try {
-    // Verifica el token usando la clave secreta definida en .env
-    // Si el token es válido devuelve el payload
+
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Guarda el payload del usuario dentro del request
-    // Esto permite que los controladores sepan qué usuario está autenticado
-    req.user = { id: payload.id }; // solo almacenamos el id por seguridad
+    // 🔥 DEBUG (ver si el token es válido)
+    console.log("✅ TOKEN VÁLIDO:", payload);
 
-    // Permite continuar hacia la siguiente función (controlador o middleware)
+
+    // Guardar usuario en request
+    req.user = { id: payload.id };
+
+
+    // Continuar al controlador
     next();
+
   } catch (error) {
-    // Si el token es inválido, expiró o fue alterado
-    return res.status(401).json({ message: "Token inválido o expirado" });
+
+    console.log("❌ Token inválido o expirado:", error.message);
+
+    return res.status(401).json({
+      message: "Token inválido o expirado"
+    });
+
   }
+
 }
 
-// Exporta el middleware para usarlo en rutas privadas
+
+// ============================================================
+// EXPORT
+// ============================================================
+
 module.exports = authMiddleware;

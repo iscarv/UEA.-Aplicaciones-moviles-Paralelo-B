@@ -13,49 +13,48 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // ================= BASE URL =================
 
 /*
-Definimos la URL del backend dependiendo de la plataforma.
+====================================================
+CONFIGURACIÓN DE URL DEL BACKEND
+====================================================
 
 WEB:
-http://localhost:3000
+✔ Usa localhost
 
 MÓVIL (Expo Go):
-usar la IP local del backend
+✔ DEBE usar la IP de tu computadora
+✔ NO usar localhost (no funciona en celular)
+
+IMPORTANTE:
+✔ Debe ser la misma IP que usas en el navegador
+✔ Ejemplo: http://192.168.100.10:3000
 */
 
 const baseURL =
   Platform.OS === "web"
     ? "http://localhost:3000/api"
-    : "http://192.168.100.10:3000/api";
+    : "http://192.168.100.10:3000/api"; // 🔥 TU IP LOCAL
 
 
 // ================= INSTANCIA AXIOS =================
 
 /*
-Creamos una instancia personalizada de axios
-para usarla en toda la aplicación.
+====================================================
+CONFIGURACIÓN DE AXIOS
+====================================================
 
-⚠ IMPORTANTE
+✔ Se usa para GET, DELETE, PUT
+✔ Para POST con imágenes usamos fetch (en bookService)
 
-NO definir "Content-Type": "application/json"
-
-porque cuando enviamos imágenes usando FormData,
-Axios necesita establecer automáticamente:
-
-multipart/form-data
-
-Si se fija manualmente application/json,
-Multer en el backend NO recibe el archivo.
+NO definir Content-Type manualmente aquí
 */
 
 const api = axios.create({
   baseURL,
 
-  // Tiempo máximo de espera de la petición
   timeout: 10000,
 
-  // Headers por defecto
   headers: {
-    Accept: "application/json", // Solo indicamos que esperamos JSON
+    Accept: "application/json",
   },
 });
 
@@ -63,15 +62,15 @@ const api = axios.create({
 // ================= INTERCEPTOR REQUEST =================
 
 /*
-Este interceptor se ejecuta antes de cada petición.
+====================================================
+AGREGAR TOKEN AUTOMÁTICAMENTE
+====================================================
 
-Su función es:
+✔ Antes de cada petición:
+  - Obtiene token
+  - Lo agrega al header Authorization
 
-1️⃣ Obtener el token guardado en AsyncStorage
-2️⃣ Agregarlo al header Authorization
-
-Esto permite que todas las rutas protegidas
-del backend reciban el token JWT.
+Esto permite acceder a rutas protegidas
 */
 
 api.interceptors.request.use(
@@ -79,10 +78,11 @@ api.interceptors.request.use(
 
     try {
 
-      // Obtener token almacenado
       const token = await AsyncStorage.getItem("token");
 
-      // Si existe token lo agregamos al header
+      // 🔥 DEBUG CLAVE
+      console.log("🔐 Interceptor token:", token);
+
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -97,26 +97,21 @@ api.interceptors.request.use(
 
   },
 
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 
 // ================= INTERCEPTOR RESPONSE =================
 
 /*
-Este interceptor maneja respuestas del servidor.
+====================================================
+MANEJO DE ERRORES 401
+====================================================
 
-Ejemplo de uso:
+Si el token expira:
 
-Si el backend responde 401 significa:
-
-✔ token expirado
-✔ token inválido
-✔ usuario no autenticado
-
-En ese caso limpiamos la sesión automáticamente.
+✔ Se elimina del storage
+✔ Se fuerza re-login
 */
 
 api.interceptors.response.use(
@@ -127,14 +122,11 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
 
-      console.warn("Token inválido o expirado");
+      console.warn("⚠️ Token inválido o expirado");
 
-      // Eliminar token guardado
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("token_expires");
 
-      // La redirección al login se controla
-      // desde index.tsx en el frontend
     }
 
     return Promise.reject(error);
@@ -145,6 +137,4 @@ api.interceptors.response.use(
 
 // ================= EXPORT =================
 
-// Exportamos la instancia de axios
-// para usarla en todos los servicios de la app
 export default api;
