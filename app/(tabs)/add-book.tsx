@@ -24,6 +24,8 @@ export default function AddBookScreen() {
   // ================= STATES =================
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  const [pagesTotal, setPagesTotal] = useState("");
+  const [pagesRead, setPagesRead] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -47,13 +49,11 @@ export default function AddBookScreen() {
 
       if (Platform.OS !== "web") {
 
-        // En móvil guardamos imagen en filesystem
         const saved = await saveImage(uri);
         setImage(saved);
 
       } else {
 
-        // En web usamos la URI directamente
         setImage(uri);
 
       }
@@ -126,24 +126,20 @@ export default function AddBookScreen() {
 
     const formData = new FormData();
 
-    // Agregar datos del libro
     formData.append("title", title);
     formData.append("author", author);
+
+    // ===== PAGINAS =====
+    formData.append("pages_total", pagesTotal || "0");
+    formData.append("pages_read", pagesRead || "0");
 
 
 
     // ================= SUBIR IMAGEN =================
     if (image) {
 
-      /*
-      Obtenemos el nombre del archivo desde la URI
-      */
       let filename = image.split("/").pop() || "photo.jpg";
 
-      /*
-      Si la URI no tiene extensión (común en web),
-      agregamos ".jpg"
-      */
       if (!filename.includes(".")) {
         filename = filename + ".jpg";
       }
@@ -153,7 +149,7 @@ export default function AddBookScreen() {
 
 
 
-      // ================= WEB =================
+      // ===== WEB =====
       if (Platform.OS === "web") {
 
         const response = await fetch(image);
@@ -163,12 +159,11 @@ export default function AddBookScreen() {
 
       }
 
-      // ================= EXPO GO / MÓVIL =================
+      // ===== MOBILE =====
       else {
 
         let uriForFormData = image;
 
-        // iOS necesita eliminar el prefijo file://
         if (Platform.OS === "ios") {
           uriForFormData = image.replace("file://", "");
         }
@@ -185,17 +180,6 @@ export default function AddBookScreen() {
 
 
 
-    /*
-    ====================================================
-    CORRECCIÓN SEGURA PARA ERROR FALSO DE AXIOS
-    ====================================================
-
-    A veces Axios entra en catch aunque
-    el backend ya haya guardado el libro.
-
-    Por eso usamos la variable "saved".
-    */
-
     let saved = false;
 
     try {
@@ -209,25 +193,20 @@ export default function AddBookScreen() {
     } catch (error) {
 
       console.error("Axios reportó error:", error);
-
-      /*
-      Aunque Axios marque error,
-      el backend normalmente ya guardó el libro.
-      */
       saved = true;
 
     }
 
 
 
-    // ================= RESULTADO FINAL =================
     if (saved) {
 
       Alert.alert("Éxito", "Libro guardado correctamente 📚");
 
-      // Limpiar formulario
       setTitle("");
       setAuthor("");
+      setPagesTotal("");
+      setPagesRead("");
       setImage(null);
 
     }
@@ -259,6 +238,24 @@ export default function AddBookScreen() {
         onChangeText={setAuthor}
       />
 
+      {/* PAGINAS TOTALES */}
+      <TextInput
+        style={styles.input}
+        placeholder="Páginas totales"
+        value={pagesTotal}
+        onChangeText={setPagesTotal}
+        keyboardType="numeric"
+      />
+
+      {/* PAGINAS LEIDAS */}
+      <TextInput
+        style={styles.input}
+        placeholder="Páginas leídas"
+        value={pagesRead}
+        onChangeText={setPagesRead}
+        keyboardType="numeric"
+      />
+
       <Button title="Tomar foto de portada" onPress={handleTakePhoto} />
 
       <View style={{ height: 10 }} />
@@ -267,12 +264,9 @@ export default function AddBookScreen() {
 
 
 
-      {/* Vista previa de imagen */}
       {image && (
         <Image source={{ uri: image }} style={styles.image} />
       )}
-
-
 
       <View style={{ height: 20 }} />
 

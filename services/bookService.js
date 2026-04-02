@@ -2,187 +2,165 @@
 // IMPORTS
 // ======================================================
 
-// AsyncStorage para manejar el token JWT
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// Detectar plataforma (web / móvil)
-import { Platform } from "react-native";
-
-// Instancia Axios configurada (baseURL)
 import api from "./api";
-
-
-// ======================================================
-// BOOK SERVICE
-// ======================================================
-// CRUD de libros centralizado
 
 
 // ======================================================
 // CREAR LIBRO
 // ======================================================
+
 export const createBook = async (formData) => {
 
   const token = await AsyncStorage.getItem("token");
-
-  console.log("📤 Enviando libro al backend...");
 
   try {
 
     const response = await fetch(`${api.defaults.baseURL}/books`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`
       },
-      body: formData,
+      body: formData
     });
 
-    console.log("📡 STATUS:", response.status);
-
-    const text = await response.text();
-
-    console.log("📥 RESPUESTA RAW:", text);
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.log("⚠️ Error parseando JSON:", e.message);
-      data = null;
-    }
-
-    return data || { success: false };
+    return await response.json();
 
   } catch (error) {
 
-    console.log("❌ ERROR FETCH:", error.message);
+    console.log("❌ Error creando libro:", error);
 
     return { success: false };
 
   }
+
 };
 
 
 // ======================================================
 // OBTENER LIBROS
 // ======================================================
+
 export const getBooks = async () => {
 
+  const token = await AsyncStorage.getItem("token");
+
   try {
-
-    const token = await AsyncStorage.getItem("token");
-
-    console.log("🔑 TOKEN:", token);
-    console.log("📚 Solicitando libros al backend...");
 
     const response = await fetch(`${api.defaults.baseURL}/books`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
-      },
+        Authorization: `Bearer ${token}`
+      }
     });
 
-    const text = await response.text();
-
-    console.log("📥 Libros RAW:", text);
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = [];
-    }
-
-    return Array.isArray(data) ? data : [];
+    return await response.json();
 
   } catch (error) {
 
-    console.log("❌ Error GET books:", error.message);
+    console.log("❌ Error obteniendo libros:", error);
 
     return [];
 
   }
+
 };
 
 
 // ======================================================
-// ELIMINAR LIBRO
+// ELIMINAR LIBRO (FIX WEB)
 // ======================================================
+
 export const deleteBook = async (id) => {
 
-  try {
-
-    const token = await AsyncStorage.getItem("token");
-
-    console.log("🗑 Eliminando libro:", id);
-
-    await api.delete(`/books/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-  } catch (error) {
-
-    console.error("❌ Error eliminando libro:", error);
-
-    throw error;
-
-  }
-};
-
-
-// ======================================================
-// EDITAR LIBRO (FIX CON FETCH)
-// ======================================================
-export const updateBook = async (id, formData) => {
-
   const token = await AsyncStorage.getItem("token");
-
-  console.log("✏️ Actualizando libro:", id);
 
   try {
 
     const response = await fetch(`${api.defaults.baseURL}/books/${id}`, {
-      method: "PUT",
+      method: "DELETE",
       headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
+        Authorization: `Bearer ${token}`
+      }
     });
 
-    console.log("📡 STATUS UPDATE:", response.status);
-
-    const text = await response.text();
-
-    console.log("📥 RESPUESTA RAW UPDATE:", text);
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = null;
+    // FIX: algunos backends no devuelven JSON en DELETE
+    if (!response.ok) {
+      throw new Error("Error eliminando libro");
     }
 
-    return data || { success: false };
+    return true;
 
   } catch (error) {
 
-    console.log("❌ ERROR UPDATE FETCH:", error.message);
+    console.log("❌ Error eliminando libro:", error);
 
-    return { success: false };
+    throw error;
 
   }
+
 };
 
 
 // ======================================================
-// NORMALIZAR IMAGEN (iOS FIX)
+// ACTUALIZAR LIBRO
+// FUNCIONA CON JSON Y FORM-DATA
 // ======================================================
-export const normalizeImageUri = (image) => {
 
-  return Platform.OS === "ios"
-    ? image.replace("file://", "")
-    : image;
+export const updateBook = async (id, data) => {
+
+  const token = await AsyncStorage.getItem("token");
+
+  try {
+
+    let options = {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: null
+    };
+
+    // ======================================================
+    // FORM DATA (PORTADA) - FIX WEB
+    // ======================================================
+    if (data instanceof FormData) {
+
+      options.headers = {
+        Authorization: `Bearer ${token}`
+      };
+
+      options.body = data;
+
+    }
+
+    // ======================================================
+    // JSON (FAVORITOS / TEXTO)
+    // ======================================================
+    else {
+
+      options.headers = {
+        ...options.headers,
+        "Content-Type": "application/json"
+      };
+
+      options.body = JSON.stringify(data);
+
+    }
+
+    const response = await fetch(
+      `${api.defaults.baseURL}/books/${id}`,
+      options
+    );
+
+    return await response.json();
+
+  } catch (error) {
+
+    console.log("❌ Error actualizando libro:", error);
+
+    return { success: false };
+
+  }
 
 };

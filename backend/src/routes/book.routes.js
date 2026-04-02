@@ -1,54 +1,87 @@
 // ============================================================
 // IMPORTS
 // ============================================================
-const express = require("express");                     // Framework para rutas
-const router = express.Router();                        // Router de Express
-const multer = require("multer");                       // Subida de archivos
-const path = require("path");                           // Manejo de rutas
-const bookController = require("../controllers/book.controller"); // Lógica de libros
-const authMiddleware = require("../middleware/auth.middleware");  // Middleware JWT
+
+const express = require("express");
+const router = express.Router();
+
+const multer = require("multer");
+const path = require("path");
+
+const bookController = require("../controllers/book.controller");
+const authMiddleware = require("../middleware/auth.middleware");
 
 
 // ============================================================
-// CONFIGURACIÓN DE MULTER (SUBIDA DE IMÁGENES)
+// CONFIGURACIÓN MULTER (SUBIDA DE IMÁGENES)
 // ============================================================
+
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/"); // Carpeta de almacenamiento
+
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
   },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext); // Nombre único
-  },
+
+  filename: (req, file, cb) => {
+
+    const uniqueName =
+      Date.now() + "-" + Math.round(Math.random() * 1e9);
+
+    cb(null, uniqueName + path.extname(file.originalname));
+
+  }
+
 });
 
 const upload = multer({ storage });
 
 
 // ============================================================
+// MIDDLEWARE PARA MANEJAR ERRORES DE MULTER
+// ============================================================
+
+const uploadImage = (req, res, next) => {
+
+  upload.single("image")(req, res, function (err) {
+
+    if (err) {
+
+      console.error("❌ Error subiendo imagen:", err);
+
+      return res.status(500).json({
+        message: "Error subiendo imagen"
+      });
+
+    }
+
+    next();
+
+  });
+
+};
+
+
+// ============================================================
 // RUTAS DE LIBROS
 // ============================================================
 
-// ---------------- CREAR LIBRO ----------------
+
+// ============================================================
+// CREAR LIBRO
+// ============================================================
+
 router.post(
   "/",
   authMiddleware,
-
-  (req, res, next) => {
-    upload.single("image")(req, res, function (err) {
-      if (err) {
-        console.error("❌ Error subiendo imagen:", err);
-        return res.status(500).json({ message: "Error subiendo imagen" });
-      }
-      next();
-    });
-  },
-
+  uploadImage,
   bookController.createBook
 );
 
 
-// ---------------- OBTENER LIBROS ----------------
+// ============================================================
+// OBTENER LIBROS
+// ============================================================
+
 router.get(
   "/",
   authMiddleware,
@@ -56,7 +89,22 @@ router.get(
 );
 
 
-// ---------------- ELIMINAR LIBRO ----------------
+// ============================================================
+// ACTUALIZAR LIBRO (EDITAR + FAVORITOS)
+// ============================================================
+
+router.put(
+  "/:id",
+  authMiddleware,
+  uploadImage,
+  bookController.updateBook
+);
+
+
+// ============================================================
+// ELIMINAR LIBRO
+// ============================================================
+
 router.delete(
   "/:id",
   authMiddleware,
@@ -64,26 +112,8 @@ router.delete(
 );
 
 
-// ---------------- ACTUALIZAR LIBRO ----------------
-router.put(
-  "/:id",
-  authMiddleware,
-
-  (req, res, next) => {
-    upload.single("image")(req, res, function (err) {
-      if (err) {
-        console.error("❌ Error subiendo imagen:", err);
-        return res.status(500).json({ message: "Error subiendo imagen" });
-      }
-      next();
-    });
-  },
-
-  bookController.updateBook
-);
-
-
 // ============================================================
 // EXPORTAR ROUTER
 // ============================================================
+
 module.exports = router;

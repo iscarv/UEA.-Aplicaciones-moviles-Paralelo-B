@@ -7,15 +7,16 @@ exports.createBook = async (data) => {
 
   const sql = `
     INSERT INTO books 
-    (title, author, image, user_id)
-    VALUES (?, ?, ?, ?)
+    (title, author, image, user_id, favorite)
+    VALUES (?, ?, ?, ?, ?)
   `;
 
   const [result] = await db.query(sql, [
     data.title,
     data.author,
     data.image,
-    data.user_id
+    data.user_id,
+    data.favorite ?? 0
   ]);
 
   return result;
@@ -57,30 +58,64 @@ exports.updateBook = async (id, data) => {
   let sql;
   let params;
 
-  // Si hay nueva imagen
-  if (data.image) {
+  // ====================================================
+  // CASO 1: SOLO ACTUALIZAR FAVORITO
+  // ====================================================
+  if (data.favorite !== undefined && !data.title && !data.author && !data.image) {
 
     sql = `
       UPDATE books
-      SET title = ?, author = ?, image = ?
+      SET favorite = ?
       WHERE id = ?
     `;
 
-    params = [data.title, data.author, data.image, id];
+    params = [data.favorite, id];
 
-  } else {
+  }
+
+  // ====================================================
+  // CASO 2: ACTUALIZAR CON IMAGEN
+  // ====================================================
+  else if (data.image) {
 
     sql = `
       UPDATE books
-      SET title = ?, author = ?
+      SET title = ?, author = ?, image = ?, favorite = ?
       WHERE id = ?
     `;
 
-    params = [data.title, data.author, id];
+    params = [
+      data.title,
+      data.author,
+      data.image,
+      data.favorite ?? 0,
+      id
+    ];
+
+  }
+
+  // ====================================================
+  // CASO 3: ACTUALIZAR SIN IMAGEN
+  // ====================================================
+  else {
+
+    sql = `
+      UPDATE books
+      SET title = ?, author = ?, favorite = ?
+      WHERE id = ?
+    `;
+
+    params = [
+      data.title,
+      data.author,
+      data.favorite ?? 0,
+      id
+    ];
 
   }
 
   const [result] = await db.query(sql, params);
 
   return result;
+
 };

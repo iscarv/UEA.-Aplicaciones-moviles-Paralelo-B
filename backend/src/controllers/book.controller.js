@@ -41,14 +41,16 @@ exports.createBook = async (req, res) => {
       title,
       author,
       image: imagePath,
-      user_id
+      user_id,
+      favorite: 0
     });
 
     return res.status(201).json({
       success: true,
       message: "Libro creado correctamente",
       id: result.insertId,
-      image: imagePath
+      image: imagePath,
+      favorite: 0
     });
 
   } catch (error) {
@@ -132,13 +134,20 @@ exports.updateBook = async (req, res) => {
   try {
 
     const { id } = req.params;
-    const { title, author } = req.body;
+
+    const {
+      title,
+      author,
+      favorite
+    } = req.body;
 
     const user_id = req.user?.id;
 
     if (!user_id) {
       console.log("❌ Usuario no autenticado");
-      return res.status(401).json({ message: "Usuario no autenticado" });
+      return res.status(401).json({
+        message: "Usuario no autenticado"
+      });
     }
 
     let imagePath = null;
@@ -151,6 +160,7 @@ exports.updateBook = async (req, res) => {
     await Book.updateBook(id, {
       title,
       author,
+      favorite,
       image: imagePath
     });
 

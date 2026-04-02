@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,7 +17,7 @@ import {
 } from "react-native";
 
 // Servicios backend
-import { deleteBook, getBooks } from "../../services/bookService";
+import { deleteBook, getBooks, updateBook } from "../../services/bookService";
 
 
 // =====================================================
@@ -29,6 +30,8 @@ export default function MyBooksScreen() {
 
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [showFavorites, setShowFavorites] = useState(false);
 
 
   // =====================================================
@@ -70,54 +73,125 @@ export default function MyBooksScreen() {
 
 
   // =====================================================
-  // ELIMINAR LIBRO
-  // =====================================================
+  // ELIMINAR LIBRO (FIX WEB)
+// =====================================================
 
-  const handleDelete = (id: number) => {
+  const removeBook = async (id: number) => {
 
-    Alert.alert("Eliminar libro", "¿Está seguro?", [
+    // ===== WEB =====
+    if (Platform.OS === "web") {
 
-      { text: "Cancelar" },
+      const confirmDelete = window.confirm("¿Eliminar este libro?");
 
-      {
-        text: "Eliminar",
+      if (!confirmDelete) return;
 
-        onPress: async () => {
+      try {
 
-          try {
+        await deleteBook(id);
 
-            await deleteBook(id);
+        alert("Libro eliminado correctamente");
 
-            loadBooks();
+        loadBooks();
 
-          } catch (error) {
+      } catch (error) {
 
-            console.error("❌ Error eliminando libro:", error);
+        console.error("❌ Error eliminando libro:", error);
 
-          }
+      }
+
+    }
+
+    // ===== MOBILE =====
+    else {
+
+      Alert.alert("Eliminar libro", "¿Está seguro?", [
+
+        { text: "Cancelar" },
+
+        {
+          text: "Eliminar",
+
+          onPress: async () => {
+
+            try {
+
+              await deleteBook(id);
+
+              Alert.alert("Libro eliminado correctamente");
+
+              loadBooks();
+
+            } catch (error) {
+
+              console.error("❌ Error eliminando libro:", error);
+
+            }
+
+          },
 
         },
 
-      },
+      ]);
 
-    ]);
+    }
 
   };
 
 
   // =====================================================
-  // URL IMAGEN
+  // FAVORITO (FIX BACKEND BOOLEAN)
+// =====================================================
+
+  const toggleFavorite = async (book: any) => {
+
+    try {
+
+      const newValue = book.favorite ? 0 : 1;
+
+      await updateBook(book.id, {
+        favorite: newValue
+      });
+
+      Alert.alert(
+        "Favoritos",
+        newValue ? "Añadido a favoritos ⭐" : "Eliminado de favoritos"
+      );
+
+      loadBooks();
+
+    } catch (error) {
+
+      console.error("❌ Error actualizando favorito:", error);
+
+    }
+
+  };
+
+
   // =====================================================
+  // URL IMAGEN (FIX CACHE WEB)
+// =====================================================
 
   const getImageUrl = (image?: string) => {
 
     if (!image) return undefined;
 
-    if (image.startsWith("http")) return image;
+    const base = image.startsWith("http")
+      ? image
+      : `http://192.168.100.10:3000${image}`;
 
-    return `http://192.168.100.10:3000${image}`;
+    return `${base}?cache=${Date.now()}`;
 
   };
+
+
+  // =====================================================
+  // FILTRO FAVORITOS
+  // =====================================================
+
+  const filteredBooks = showFavorites
+    ? books.filter(book => book.favorite)
+    : books;
 
 
   // =====================================================
@@ -144,7 +218,12 @@ export default function MyBooksScreen() {
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.author}>{item.author}</Text>
 
-          {/*  BOTONES MEJORADOS */}
+          <Text style={styles.status}>
+            Estado: {item.status || "Por leer"}
+          </Text>
+
+          {/* BOTONES */}
+
           <View style={styles.actions}>
 
             <TouchableOpacity
@@ -161,12 +240,23 @@ export default function MyBooksScreen() {
 
             <TouchableOpacity
               style={styles.deleteBtn}
-              onPress={() => handleDelete(item.id)}
+              onPress={() => removeBook(item.id)}
             >
               <Text style={styles.btnText}>Eliminar</Text>
             </TouchableOpacity>
 
           </View>
+
+          {/* FAVORITO */}
+
+          <TouchableOpacity
+            style={styles.favoriteBtn}
+            onPress={() => toggleFavorite(item)}
+          >
+            <Text style={styles.favoriteText}>
+              {item.favorite ? "⭐ Quitar de favoritos" : "⭐ Añadir a favoritos"}
+            </Text>
+          </TouchableOpacity>
 
         </View>
 
@@ -216,8 +306,29 @@ export default function MyBooksScreen() {
 
       <Text style={styles.header}>Mis Libros 📚</Text>
 
+      {/* FILTRO */}
+
+      <View style={styles.filterContainer}>
+
+        <TouchableOpacity
+          style={!showFavorites ? styles.filterActive : styles.filterBtn}
+          onPress={() => setShowFavorites(false)}
+        >
+          <Text>Todos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={showFavorites ? styles.filterActive : styles.filterBtn}
+          onPress={() => setShowFavorites(true)}
+        >
+          <Text>Favoritos ⭐</Text>
+        </TouchableOpacity>
+
+      </View>
+
+
       <FlatList
-        data={books}
+        data={filteredBooks}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
       />
@@ -249,6 +360,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  filterContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 15,
+    gap: 10
+  },
+
+  filterBtn: {
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 10
+  },
+
+  filterActive: {
+    backgroundColor: "#efa0b4",
+    padding: 8,
+    borderRadius: 10
+  },
+
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -271,15 +401,19 @@ const styles = StyleSheet.create({
   },
 
   author: {
-    marginBottom: 10,
+    marginBottom: 6,
     color: "#555",
   },
 
-  // NUEVOS ESTILOS BOTONES
+  status: {
+    fontSize: 12,
+    marginBottom: 10
+  },
+
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10
+    marginTop: 5
   },
 
   editBtn: {
@@ -296,6 +430,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     width: "48%",
     alignItems: "center"
+  },
+
+  favoriteBtn: {
+    marginTop: 8,
+    backgroundColor: "#fff3c4",
+    padding: 8,
+    borderRadius: 10,
+    alignItems: "center"
+  },
+
+  favoriteText: {
+    fontSize: 13,
+    fontWeight: "bold"
   },
 
   btnText: {
