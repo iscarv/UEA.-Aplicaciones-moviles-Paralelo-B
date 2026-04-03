@@ -13,22 +13,51 @@ exports.createBook = async (req, res) => {
 
   console.log("📩 Petición createBook recibida");
   console.log("REQ.USER:", req.user);
+  console.log("BODY:", req.body); // para debug
 
   try {
 
-    const { title, author } = req.body;
+    // ========================================================
+    // LEER TODOS LOS CAMPOS QUE ENVÍA EL FRONTEND
+    // ========================================================
+
+    const {
+      title,
+      author,
+      pages_total,
+      pages_read,
+      status,
+      rating,
+      personal_notes,
+      chapter_notes
+    } = req.body;
+
     const user_id = req.user?.id;
+
+    // ========================================================
+    // VALIDAR USUARIO
+    // ========================================================
 
     if (!user_id) {
       console.log("❌ Usuario no autenticado");
-      return res.status(401).json({ message: "Usuario no autenticado" });
+      return res.status(401).json({
+        message: "Usuario no autenticado"
+      });
     }
+
+    // ========================================================
+    // VALIDAR CAMPOS OBLIGATORIOS
+    // ========================================================
 
     if (!title || !author) {
       return res.status(400).json({
         message: "Título y autor son obligatorios"
       });
     }
+
+    // ========================================================
+    // MANEJO DE IMAGEN
+    // ========================================================
 
     let imagePath = null;
 
@@ -37,13 +66,29 @@ exports.createBook = async (req, res) => {
       console.log("🖼 Imagen subida:", imagePath);
     }
 
+    // ========================================================
+    // CREAR LIBRO EN BASE DE DATOS
+    // ========================================================
+
     const result = await Book.createBook({
       title,
       author,
       image: imagePath,
       user_id,
-      favorite: 0
+      favorite: 0,
+
+      // NUEVOS CAMPOS
+      pages_total,
+      pages_read,
+      status,
+      rating,
+      personal_notes,
+      chapter_notes
     });
+
+    // ========================================================
+    // RESPUESTA
+    // ========================================================
 
     return res.status(201).json({
       success: true,
@@ -128,10 +173,17 @@ exports.deleteBook = async (req, res) => {
 // ============================================================
 
 exports.updateBook = async (req, res) => {
+
   console.log("✏️ updateBook request");
 
   try {
+
     const { id } = req.params;
+
+    // ========================================================
+    // CAMPOS QUE PUEDE ACTUALIZAR
+    // ========================================================
+
     const {
       title,
       author,
@@ -145,20 +197,34 @@ exports.updateBook = async (req, res) => {
     } = req.body;
 
     const user_id = req.user?.id;
+
+    // ========================================================
+    // VALIDAR USUARIO
+    // ========================================================
+
     if (!user_id) {
       console.log("❌ Usuario no autenticado");
+
       return res.status(401).json({
         message: "Usuario no autenticado"
       });
     }
 
+    // ========================================================
+    // MANEJO DE NUEVA IMAGEN
+    // ========================================================
+
     let imagePath = null;
+
     if (req.file) {
       imagePath = "/uploads/" + req.file.filename;
       console.log("🖼 Nueva imagen:", imagePath);
     }
 
-    // Llamamos al modelo pasando todas las columnas necesarias
+    // ========================================================
+    // ACTUALIZAR LIBRO EN BD
+    // ========================================================
+
     await Book.updateBook(id, {
       title,
       author,
@@ -178,7 +244,9 @@ exports.updateBook = async (req, res) => {
     });
 
   } catch (error) {
+
     console.error("❌ Error updateBook:", error);
+
     return res.status(500).json({
       message: "Error actualizando libro"
     });
