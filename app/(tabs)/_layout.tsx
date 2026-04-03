@@ -32,6 +32,7 @@ Pestañas disponibles:
 🏠 Inicio
 ➕ Agregar libro
 📚 Mis libros
+⏱ Historial de lecturas recientes
 */
 
 
@@ -59,18 +60,11 @@ export default function TabLayout() {
 
       {/* =========================================
          PESTAÑA INICIO
-         =========================================
-
-         Pantalla principal de la aplicación
-         donde se puede mostrar información general
-         como estadísticas o libros recientes.
-      */}
+      ========================================= */}
       <Tabs.Screen
         name="home"
         options={{
           title: "Inicio",
-
-          // Icono de casa
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="home"
@@ -84,28 +78,11 @@ export default function TabLayout() {
 
       {/* =========================================
          PESTAÑA AGREGAR LIBRO
-         =========================================
-
-         Permite registrar un nuevo libro
-         usando:
-
-         ✔ título
-         ✔ autor
-         ✔ foto de portada
-
-         En esta pantalla se utilizan
-         funcionalidades nativas del dispositivo:
-
-         ✔ cámara
-         ✔ galería
-         ✔ filesystem
-      */}
+      ========================================= */}
       <Tabs.Screen
         name="add-book"
         options={{
           title: "Agregar libro",
-
-          // Icono de agregar
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="add-circle"
@@ -119,27 +96,31 @@ export default function TabLayout() {
 
       {/* =========================================
          PESTAÑA MIS LIBROS
-         =========================================
-
-         Muestra la lista de libros guardados
-         en la base de datos remota.
-
-         Funcionalidades:
-
-         ✔ Cargar libros desde la API
-         ✔ Mostrar portada
-         ✔ Mostrar título y autor
-         ✔ Eliminar libros
-      */}
+      ========================================= */}
       <Tabs.Screen
         name="my-books"
         options={{
           title: "Mis libros",
-
-          // Icono de libro
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="book"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* =========================================
+         PESTAÑA HISTORIAL DE LECTURAS RECIENTES
+      ========================================= */}
+      <Tabs.Screen
+        name="recent-books"
+        options={{
+          title: "Historial",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="time"
               size={size}
               color={color}
             />

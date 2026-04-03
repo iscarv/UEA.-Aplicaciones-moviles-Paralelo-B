@@ -11,7 +11,6 @@ const path = require("path");
 const bookController = require("../controllers/book.controller");
 const authMiddleware = require("../middleware/auth.middleware");
 
-
 // ============================================================
 // CONFIGURACIÓN MULTER (SUBIDA DE IMÁGENES)
 // ============================================================
@@ -34,7 +33,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
 
 // ============================================================
 // MIDDLEWARE PARA MANEJAR ERRORES DE MULTER
@@ -60,11 +58,9 @@ const uploadImage = (req, res, next) => {
 
 };
 
-
 // ============================================================
 // RUTAS DE LIBROS
 // ============================================================
-
 
 // ============================================================
 // CREAR LIBRO
@@ -77,7 +73,6 @@ router.post(
   bookController.createBook
 );
 
-
 // ============================================================
 // OBTENER LIBROS
 // ============================================================
@@ -87,7 +82,6 @@ router.get(
   authMiddleware,
   bookController.getBooks
 );
-
 
 // ============================================================
 // ACTUALIZAR LIBRO (EDITAR + FAVORITOS)
@@ -100,7 +94,6 @@ router.put(
   bookController.updateBook
 );
 
-
 // ============================================================
 // ELIMINAR LIBRO
 // ============================================================
@@ -111,6 +104,15 @@ router.delete(
   bookController.deleteBook
 );
 
+// ============================================================
+// OBTENER ÚLTIMAS LECTURAS
+// ============================================================
+
+router.get(
+  "/recent",
+  authMiddleware,
+  bookController.getRecentBooks
+);
 
 // ============================================================
 // EXPORTAR ROUTER
