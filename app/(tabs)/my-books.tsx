@@ -206,6 +206,7 @@ export default function MyBooksScreen() {
               <Text style={styles.btnText}>Editar</Text>
             </TouchableOpacity>
 
+            {/* BOTÓN DETALLES (CORREGIDO) */}
             <TouchableOpacity
               style={styles.detailsBtn}
               onPress={() =>
@@ -214,8 +215,8 @@ export default function MyBooksScreen() {
                   params: {
                     ...item,
                     chapter_notes: JSON.stringify(item.chapter_notes ?? {}),
-                    personal_notes: item.personal_notes ?? "",
                     genres: JSON.stringify(item.genres ?? []),
+                    personal_notes: item.personal_notes ?? "",
                   },
                 })
               }

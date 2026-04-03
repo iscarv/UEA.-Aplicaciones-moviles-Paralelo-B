@@ -13,79 +13,94 @@ const StarRating = ({ rating }: { rating: number }) => {
 export default function BookDetails() {
   const params = useLocalSearchParams();
 
-  const totalPages = Number(params.pages_total) || 0;
-  const pagesRead = Number(params.pages_read) || 0;
+  const getParam = (p: string | string[] | undefined): string =>
+    Array.isArray(p) ? p[0] : p ?? "";
+
+  const totalPages = Number(getParam(params.pages_total)) || 0;
+  const pagesRead = Number(getParam(params.pages_read)) || 0;
   const percent = totalPages > 0 ? Math.round((pagesRead / totalPages) * 100) : 0;
 
-  // ================== PARSEAR NOTAS ==================
-  let personalNotes = "";
+  const rating = Number(getParam(params.rating)) || 0;
+
+  // ================== PERSONAL NOTES ==================
+  const personalNotes = getParam(params.personal_notes);
+
+  // ================== CHAPTER NOTES ==================
   let chapterNotes: Record<string, string> = {};
 
-  if (params.personal_notes) {
-    personalNotes = params.personal_notes as string;
-  }
+  const rawChapter = params.chapter_notes;
 
-  if (params.chapter_notes) {
-    const raw = params.chapter_notes as unknown;
+  try {
+    const chapterString = Array.isArray(rawChapter)
+      ? rawChapter[0]
+      : rawChapter;
 
-    if (typeof raw === "string") {
-      try {
-        chapterNotes = JSON.parse(raw) as Record<string, string>;
-      } catch (e) {
-        console.log("No se pudo parsear chapter_notes JSON:", e);
-        chapterNotes = {};
+    if (chapterString) {
+      let parsed: any = JSON.parse(String(chapterString));
+
+      // si viene doble serializado
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
       }
-    } else if (typeof raw === "object" && raw !== null) {
-      chapterNotes = raw as Record<string, string>;
+
+      chapterNotes = parsed || {};
     }
+  } catch {
+    chapterNotes = {};
   }
 
-  const rating = Number(params.rating) || 0;
-
-  // ================== PARSEAR GÉNEROS ==================
+  // ================== GENRES ==================
   let genres: string[] = [];
 
-  if (params.genres) {
-    try {
-      genres = JSON.parse(params.genres as string);
-    } catch (e) {
-      console.log("No se pudo parsear genres:", e);
-      genres = [];
+  const rawGenres = params.genres;
+
+  try {
+    const genreString = Array.isArray(rawGenres)
+      ? rawGenres[0]
+      : rawGenres;
+
+    if (genreString) {
+      let parsed: any = JSON.parse(String(genreString));
+
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+
+      genres = Array.isArray(parsed) ? parsed : [parsed];
     }
+  } catch {
+    genres = [];
   }
 
   return (
     <ScrollView style={styles.container}>
-      {/* Nombre y autor */}
       <Text style={styles.line}>
         <Text style={styles.bold}>Nombre del libro: </Text>
-        {params.title}
+        {getParam(params.title)}
       </Text>
 
       <Text style={styles.line}>
         <Text style={styles.bold}>Autor: </Text>
-        {params.author}
+        {getParam(params.author)}
       </Text>
 
       <Text style={styles.line}>
         <Text style={styles.bold}>Estado: </Text>
-        {params.status || "Por leer"}
+        {getParam(params.status) || "Por leer"}
       </Text>
 
-      {/* ================= GÉNEROS ================= */}
+      {/* GENEROS */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Géneros</Text>
 
         {genres.length === 0 ? (
           <Text>Sin géneros</Text>
         ) : (
-          genres.map((g) => (
-            <Text key={g}>• {g}</Text>
-          ))
+          genres.map((g, index) => <Text key={index}>• {g}</Text>)
         )}
       </View>
 
-      {/* Barra de progreso visual */}
+      {/* PROGRESO */}
       <View style={styles.progressBarWrapper}>
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBarFilled, { flex: percent }]} />
@@ -97,10 +112,10 @@ export default function BookDetails() {
         </Text>
       </View>
 
-      {/* Calificación */}
+      {/* CALIFICACION */}
       <StarRating rating={rating} />
 
-      {/* Notas por capítulo */}
+      {/* NOTAS POR CAPITULO */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notas por capítulo:</Text>
 
@@ -116,7 +131,7 @@ export default function BookDetails() {
         )}
       </View>
 
-      {/* Notas personales */}
+      {/* NOTAS PERSONALES */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notas personales:</Text>
         <Text>{personalNotes || "Sin notas personales"}</Text>
