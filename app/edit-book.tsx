@@ -2,7 +2,7 @@
 import { Picker } from "@react-native-picker/picker"; // <-- CORRECTO
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -38,14 +38,28 @@ export default function EditBookScreen() {
   const [pagesRead, setPagesRead] = useState(getParam(params.pages_read));
   const [status, setStatus] = useState(getParam(params.status) || "Por leer");
   const [rating, setRating] = useState(Number(getParam(params.rating) || 0));
-  const [notes, setNotes] = useState(getParam(params.notes));
 
-  // NOTAS POR CAPÍTULO
-  const [chapter, setChapter] = useState("1");
+  // Estados para nuevas columnas
+  const [personalNotes, setPersonalNotes] = useState(""); // notas personales
   const [chapterNotes, setChapterNotes] = useState<{ [key: string]: string }>({});
 
+  const [chapter, setChapter] = useState("1");
   const [image, setImage] = useState<string | null>(getParam(params.image) || null);
   const [saving, setSaving] = useState(false);
+
+  // ================= CARGAR NOTAS EXISTENTES =================
+  useEffect(() => {
+    if (params.notes) {
+      try {
+        const parsed = JSON.parse(getParam(params.notes));
+        setPersonalNotes(parsed.personal || "");
+        setChapterNotes(parsed.chapters || {});
+      } catch (e) {
+        console.log("No se pudo parsear notes:", e);
+        setPersonalNotes(getParam(params.notes));
+      }
+    }
+  }, [params.notes]);
 
   const total = Number(pagesTotal);
   const read = Number(pagesRead);
@@ -83,14 +97,11 @@ export default function EditBookScreen() {
       formData.append("status", status);
       formData.append("rating", rating.toString());
 
-      let finalNotes = notes || "";
-      Object.keys(chapterNotes).forEach((c) => {
-        if (chapterNotes[c]) {
-          finalNotes += `\n\nCapítulo ${c}: ${chapterNotes[c]}`;
-        }
-      });
-      formData.append("notes", finalNotes);
+      // Guardar notas en las nuevas columnas
+      formData.append("personal_notes", personalNotes);
+      formData.append("chapter_notes", JSON.stringify(chapterNotes));
 
+      // Imagen
       if (image && !image.includes("/uploads/")) {
         const filename = image.split("/").pop() || "photo.jpg";
         const match = /\.(\w+)$/.exec(filename);
@@ -186,8 +197,8 @@ export default function EditBookScreen() {
       <Text style={styles.sectionTitle}>Notas personales</Text>
       <TextInput
         style={[styles.input, { height: 100 }]}
-        value={notes}
-        onChangeText={setNotes}
+        value={personalNotes}
+        onChangeText={setPersonalNotes}
         placeholder="Escribe tus notas personales..."
         multiline
       />

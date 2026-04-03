@@ -128,21 +128,23 @@ exports.deleteBook = async (req, res) => {
 // ============================================================
 
 exports.updateBook = async (req, res) => {
-
   console.log("✏️ updateBook request");
 
   try {
-
     const { id } = req.params;
-
     const {
       title,
       author,
-      favorite
+      favorite,
+      pages_total,
+      pages_read,
+      status,
+      rating,
+      personal_notes,
+      chapter_notes
     } = req.body;
 
     const user_id = req.user?.id;
-
     if (!user_id) {
       console.log("❌ Usuario no autenticado");
       return res.status(401).json({
@@ -151,16 +153,22 @@ exports.updateBook = async (req, res) => {
     }
 
     let imagePath = null;
-
     if (req.file) {
       imagePath = "/uploads/" + req.file.filename;
       console.log("🖼 Nueva imagen:", imagePath);
     }
 
+    // Llamamos al modelo pasando todas las columnas necesarias
     await Book.updateBook(id, {
       title,
       author,
       favorite,
+      pages_total,
+      pages_read,
+      status,
+      rating,
+      personal_notes,
+      chapter_notes,
       image: imagePath
     });
 
@@ -170,13 +178,9 @@ exports.updateBook = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error("❌ Error updateBook:", error);
-
     return res.status(500).json({
       message: "Error actualizando libro"
     });
-
   }
-
 };
