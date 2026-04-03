@@ -16,7 +16,6 @@ export default function BookDetails() {
   const totalPages = Number(params.pages_total) || 0;
   const pagesRead = Number(params.pages_read) || 0;
   const percent = totalPages > 0 ? Math.round((pagesRead / totalPages) * 100) : 0;
-  const progressBar = "█".repeat(Math.round(percent / 10)) + "░".repeat(10 - Math.round(percent / 10));
 
   // ================== PARSEAR NOTAS ==================
   let personalNotes = "";
@@ -39,7 +38,7 @@ export default function BookDetails() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Nombre y autor en negrita */}
+      {/* Nombre y autor */}
       <Text style={styles.line}>
         <Text style={styles.bold}>Nombre del libro: </Text>
         {params.title}
@@ -48,17 +47,21 @@ export default function BookDetails() {
         <Text style={styles.bold}>Autor: </Text>
         {params.author}
       </Text>
-
       <Text style={styles.line}>
         <Text style={styles.bold}>Estado: </Text>
         {params.status || "Por leer"}
       </Text>
 
-      <Text style={styles.progressBar}>{progressBar}</Text>
-      <Text style={styles.percent}>
-        {pagesRead} / {totalPages} páginas ({percent}%)
-      </Text>
+      {/* Barra de progreso visual */}
+      <View style={styles.progressBarWrapper}>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBarFilled, { flex: percent }]} />
+          <View style={[styles.progressBarEmpty, { flex: 100 - percent }]} />
+        </View>
+        <Text style={styles.percent}>{pagesRead} / {totalPages} páginas ({percent}%)</Text>
+      </View>
 
+      {/* Calificación */}
       <StarRating rating={rating} />
 
       {/* Notas por capítulo */}
@@ -89,12 +92,28 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#fde2ea" },
   line: { fontSize: 16, marginBottom: 6 },
   bold: { fontWeight: "bold" },
-  status: { fontSize: 14, marginBottom: 10 },
-  progressBar: { fontFamily: "monospace", fontSize: 16, marginBottom: 4 },
-  percent: { fontSize: 14, fontWeight: "bold", marginBottom: 10 },
   stars: { fontSize: 20, color: "#f5c518", marginBottom: 12 },
   section: { marginTop: 15 },
   sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
   noteItem: { marginBottom: 6 },
   chapter: { fontWeight: "bold" },
+
+  // ================= Barra de progreso =================
+  progressBarWrapper: { marginVertical: 10 },
+  progressBarContainer: {
+    flexDirection: "row",
+    height: 16,
+    borderRadius: 8,
+    overflow: "hidden",
+    width: "100%", // crucial para Expo Go
+    backgroundColor: "#eee",
+  },
+  progressBarFilled: {
+    backgroundColor: "#e75480",
+  },
+  progressBarEmpty: {
+    backgroundColor: "#eee",
+  },
+  percent: { fontSize: 14, fontWeight: "bold", marginTop: 4 },
+
 });

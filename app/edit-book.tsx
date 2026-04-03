@@ -1,5 +1,5 @@
 // ================= IMPORTS =================
-import { Picker } from "@react-native-picker/picker"; // <-- CORRECTO
+import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -39,9 +39,8 @@ export default function EditBookScreen() {
   const [status, setStatus] = useState(getParam(params.status) || "Por leer");
   const [rating, setRating] = useState(Number(getParam(params.rating) || 0));
 
-  // Estados para nuevas columnas
   const [personalNotes, setPersonalNotes] = useState(""); // notas personales
-  const [chapterNotes, setChapterNotes] = useState<{ [key: string]: string }>({});
+  const [chapterNotes, setChapterNotes] = useState<{ [key: string]: string }>({}); // notas por capítulo
 
   const [chapter, setChapter] = useState("1");
   const [image, setImage] = useState<string | null>(getParam(params.image) || null);
@@ -49,17 +48,28 @@ export default function EditBookScreen() {
 
   // ================= CARGAR NOTAS EXISTENTES =================
   useEffect(() => {
+    // Notas personales
     if (params.notes) {
       try {
         const parsed = JSON.parse(getParam(params.notes));
         setPersonalNotes(parsed.personal || "");
-        setChapterNotes(parsed.chapters || {});
       } catch (e) {
         console.log("No se pudo parsear notes:", e);
         setPersonalNotes(getParam(params.notes));
       }
     }
-  }, [params.notes]);
+
+    // Notas por capítulo
+    if (params.chapter_notes) {
+      try {
+        const parsedChapters = JSON.parse(getParam(params.chapter_notes));
+        setChapterNotes(parsedChapters || {});
+      } catch (e) {
+        console.log("No se pudo parsear chapter_notes:", e);
+        setChapterNotes({});
+      }
+    }
+  }, [params.notes, params.chapter_notes]);
 
   const total = Number(pagesTotal);
   const read = Number(pagesRead);
@@ -81,6 +91,14 @@ export default function EditBookScreen() {
     }
   };
 
+  // ================= UPDATE CHAPTER NOTES HANDLER =================
+  const handleChapterNoteChange = (chapter: string, text: string) => {
+    setChapterNotes((prev) => ({
+      ...prev,
+      [chapter]: text
+    }));
+  };
+
   // ================= SAVE BOOK =================
   const saveBook = async () => {
     if (!title || !author) {
@@ -97,7 +115,6 @@ export default function EditBookScreen() {
       formData.append("status", status);
       formData.append("rating", rating.toString());
 
-      // Guardar notas en las nuevas columnas
       formData.append("personal_notes", personalNotes);
       formData.append("chapter_notes", JSON.stringify(chapterNotes));
 
@@ -219,9 +236,7 @@ export default function EditBookScreen() {
       <TextInput
         style={[styles.input, { height: 80 }]}
         value={chapterNotes[chapter] || ""}
-        onChangeText={(text) =>
-          setChapterNotes({ ...chapterNotes, [chapter]: text })
-        }
+        onChangeText={(text) => handleChapterNoteChange(chapter, text)}
         placeholder={`Escribe nota del capítulo ${chapter}...`}
         multiline
       />

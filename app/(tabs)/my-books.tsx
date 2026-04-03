@@ -126,8 +126,6 @@ export default function MyBooksScreen() {
     const total = Number(item.pages_total) || 0;
     const read = Number(item.pages_read) || 0;
     const percent = total > 0 ? Math.round((read / total) * 100) : 0;
-    const progressBar =
-      "█".repeat(Math.round(percent / 10)) + "░".repeat(10 - Math.round(percent / 10));
 
     // CALIFICACIÓN EN ESTRELLAS
     const stars = [];
@@ -143,8 +141,16 @@ export default function MyBooksScreen() {
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.author}>{item.author}</Text>
           <Text style={styles.status}>Estado: {item.status || "Por leer"}</Text>
-          <Text style={styles.progressBar}>{progressBar}</Text>
-          <Text style={styles.percent}>{percent}% leído</Text>
+
+          {/* Barra de progreso visual */}
+          <View style={styles.progressBarWrapper}>
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBarFilled, { flex: percent }]} />
+              <View style={[styles.progressBarEmpty, { flex: 100 - percent }]} />
+            </View>
+            <Text style={styles.percent}>{percent}% leído</Text>
+          </View>
+
           <Text style={styles.stars}>{stars.join(" ")}</Text>
 
           {/* BOTONES */}
@@ -168,8 +174,9 @@ export default function MyBooksScreen() {
                   pathname: "/book-details",
                   params: {
                     ...item,
-                    chapterNotes: JSON.stringify(item.chapterNotes || {}),
-                    personalNotes: item.personalNotes || "",
+                    // 🔹 Solución completa: enviar siempre campos válidos
+                    chapter_notes: JSON.stringify(item.chapterNotes ?? {}),
+                    personal_notes: item.personalNotes ?? "",
                   },
                 })
               }
@@ -267,8 +274,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: "bold" },
   author: { marginBottom: 6, color: "#555" },
   status: { fontSize: 12, marginBottom: 4 },
-  progressBar: { fontFamily: "monospace" },
-  percent: { fontSize: 12, fontWeight: "bold", marginBottom: 6 },
   stars: { fontSize: 16, marginBottom: 6 },
   actions: { flexDirection: "row", justifyContent: "space-between", marginTop: 5 },
   editBtn: { backgroundColor: "#efa0b4", padding: 10, borderRadius: 14, width: "48%", alignItems: "center" },
@@ -277,4 +282,18 @@ const styles = StyleSheet.create({
   favoriteText: { fontSize: 13, fontWeight: "bold" },
   btnText: { color: "#fff", fontWeight: "bold" },
   empty: { textAlign: "center", fontSize: 18, marginTop: 40 },
+
+  // ================= Barra de progreso =================
+  progressBarWrapper: { marginVertical: 6 },
+  progressBarContainer: {
+    flexDirection: "row",
+    height: 12,
+    borderRadius: 6,
+    overflow: "hidden",
+    width: "100%",
+    backgroundColor: "#eee",
+  },
+  progressBarFilled: { backgroundColor: "#e75480" },
+  progressBarEmpty: { backgroundColor: "#eee" },
+  percent: { fontSize: 12, fontWeight: "bold", marginTop: 2 },
 });
