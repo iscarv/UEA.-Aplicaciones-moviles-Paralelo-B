@@ -29,7 +29,8 @@ exports.createBook = async (req, res) => {
       status,
       rating,
       personal_notes,
-      chapter_notes
+      chapter_notes,
+      genres // ✅ NUEVO CAMPO (géneros del libro)
     } = req.body;
 
     const user_id = req.user?.id;
@@ -77,13 +78,16 @@ exports.createBook = async (req, res) => {
       user_id,
       favorite: 0,
 
-      // NUEVOS CAMPOS
+      // CAMPOS EXISTENTES
       pages_total,
       pages_read,
       status,
       rating,
       personal_notes,
-      chapter_notes
+      chapter_notes,
+
+      // ✅ NUEVO CAMPO
+      genres
     });
 
     // ========================================================
@@ -193,7 +197,8 @@ exports.updateBook = async (req, res) => {
       status,
       rating,
       personal_notes,
-      chapter_notes
+      chapter_notes,
+      genres // ✅ NUEVO CAMPO
     } = req.body;
 
     const user_id = req.user?.id;
@@ -235,6 +240,7 @@ exports.updateBook = async (req, res) => {
       rating,
       personal_notes,
       chapter_notes,
+      genres, 
       image: imagePath
     });
 

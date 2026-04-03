@@ -16,8 +16,23 @@ import {
 } from "react-native";
 import { updateBook } from "../services/bookService";
 
+
+// ================= GENEROS DISPONIBLES =================
+const GENRES = [
+  "Misterio",
+  "Romance",
+  "Fantasía",
+  "Ciencia ficción",
+  "Terror",
+  "Aventura",
+  "Drama",
+  "Historia"
+];
+
+
 // ================= SCREEN =================
 export default function EditBookScreen() {
+
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -25,6 +40,7 @@ export default function EditBookScreen() {
     Array.isArray(p) ? p[0] : p ?? "";
 
   const id = getParam(params.id);
+
   if (!id) {
     Alert.alert("Error", "ID del libro no válido");
     router.back();
@@ -39,77 +55,134 @@ export default function EditBookScreen() {
   const [status, setStatus] = useState(getParam(params.status) || "Por leer");
   const [rating, setRating] = useState(Number(getParam(params.rating) || 0));
 
-  const [personalNotes, setPersonalNotes] = useState(""); // notas personales
-  const [chapterNotes, setChapterNotes] = useState<{ [key: string]: string }>({}); // notas por capítulo
+  const [personalNotes, setPersonalNotes] = useState("");
+  const [chapterNotes, setChapterNotes] = useState<{ [key: string]: string }>({});
   const [chapter, setChapter] = useState("1");
+
   const [image, setImage] = useState<string | null>(getParam(params.image) || null);
   const [saving, setSaving] = useState(false);
 
-  // ================= CARGAR NOTAS EXISTENTES =================
-  useEffect(() => {
-    // Personal notes
-    if (params.personal_notes) {
-      const raw = params.personal_notes as unknown;
-      if (typeof raw === "string") {
-        setPersonalNotes(raw);
-      } else if (typeof raw === "object" && raw !== null) {
-        setPersonalNotes((raw as any).toString() || "");
-      }
+  // ================= GENEROS =================
+  const [genres, setGenres] = useState<string[]>([]);
+
+
+  // ================= TOGGLE GENERO =================
+  const toggleGenre = (genre: string) => {
+
+    if (genres.includes(genre)) {
+      setGenres(genres.filter((g) => g !== genre));
+    } else {
+      setGenres([...genres, genre]);
     }
 
-    // Chapter notes
+  };
+
+
+  // ================= CARGAR DATOS EXISTENTES =================
+  useEffect(() => {
+
+    // PERSONAL NOTES
+    if (params.personal_notes) {
+
+      const raw = params.personal_notes as unknown;
+
+      if (typeof raw === "string") {
+        setPersonalNotes(raw);
+      }
+
+    }
+
+    // CHAPTER NOTES
     if (params.chapter_notes) {
+
       const raw = params.chapter_notes as unknown;
+
       if (typeof raw === "string") {
         try {
           setChapterNotes(JSON.parse(raw) || {});
-        } catch (e) {
-          console.log("No se pudo parsear chapter_notes:", e);
+        } catch {
           setChapterNotes({});
         }
-      } else if (typeof raw === "object" && raw !== null) {
+      }
+
+      if (typeof raw === "object" && raw !== null) {
         setChapterNotes(raw as Record<string, string>);
       }
+
     }
-  }, [params.personal_notes, params.chapter_notes]);
+
+    // GENEROS
+    if (params.genres) {
+
+      const raw = params.genres as unknown;
+
+      if (typeof raw === "string") {
+
+        try {
+          setGenres(JSON.parse(raw) || []);
+        } catch {
+          setGenres([]);
+        }
+
+      }
+
+    }
+
+  }, []);
+
 
   const total = Number(pagesTotal);
   const read = Number(pagesRead);
   const percent = total > 0 ? Math.round((read / total) * 100) : 0;
 
+
   // ================= PICK IMAGE =================
   const pickImage = async () => {
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permission.granted) {
       Alert.alert("Permiso denegado");
       return;
     }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7
     });
+
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
+
   };
 
-  // ================= UPDATE CHAPTER NOTES HANDLER =================
+
+  // ================= UPDATE CHAPTER NOTES =================
   const handleChapterNoteChange = (chapter: string, text: string) => {
+
     setChapterNotes((prev) => ({
       ...prev,
       [chapter]: text
     }));
+
   };
+
 
   // ================= SAVE BOOK =================
   const saveBook = async () => {
+
     if (!title || !author) {
       Alert.alert("Error", "Debe ingresar título y autor");
       return;
     }
+
     setSaving(true);
+
     try {
+
       const formData = new FormData();
+
       formData.append("title", title);
       formData.append("author", author);
       formData.append("pages_total", pagesTotal || "0");
@@ -119,44 +192,68 @@ export default function EditBookScreen() {
       formData.append("personal_notes", personalNotes);
       formData.append("chapter_notes", JSON.stringify(chapterNotes));
 
-      // Imagen
+      // ===== GENEROS =====
+      formData.append("genres", JSON.stringify(genres));
+
+
+      // ===== IMAGEN =====
       if (image && !image.includes("/uploads/")) {
+
         const filename = image.split("/").pop() || "photo.jpg";
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : "image/jpeg";
 
         if (Platform.OS === "web") {
+
           const response = await fetch(image);
           const blob = await response.blob();
+
           formData.append("image", blob, filename);
+
         } else {
+
           formData.append("image", {
             uri: image,
             name: filename,
             type
           } as any);
+
         }
+
       }
 
       await updateBook(id, formData);
+
       Alert.alert("Éxito", "Libro actualizado correctamente");
+
       router.back();
+
     } catch (error) {
+
       console.log("❌ ERROR UPDATE:", error);
+
       Alert.alert("Error", "No se pudo actualizar el libro");
+
     } finally {
+
       setSaving(false);
+
     }
+
   };
+
 
   // ================= UI =================
   return (
+
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 40 }}
       showsVerticalScrollIndicator={true}
     >
+
       <Text style={styles.title}>Editar Libro 📚</Text>
+
 
       <TextInput
         style={styles.input}
@@ -172,6 +269,7 @@ export default function EditBookScreen() {
         placeholder="Autor"
       />
 
+
       <TextInput
         style={styles.input}
         value={pagesTotal}
@@ -179,6 +277,7 @@ export default function EditBookScreen() {
         placeholder="Páginas totales"
         keyboardType="numeric"
       />
+
 
       <TextInput
         style={styles.input}
@@ -188,31 +287,73 @@ export default function EditBookScreen() {
         keyboardType="numeric"
       />
 
+
       <Text style={styles.percent}>Progreso: {percent}%</Text>
 
+
       <Text style={styles.sectionTitle}>Estado</Text>
+
       <View style={styles.statusContainer}>
+
         {["Por leer", "Leyendo", "Leído"].map((s) => (
+
           <TouchableOpacity
             key={s}
             style={[styles.statusBtn, status === s && styles.statusActive]}
             onPress={() => setStatus(s)}
           >
+
             <Text>{s}</Text>
+
           </TouchableOpacity>
+
         ))}
+
       </View>
 
+
       <Text style={styles.sectionTitle}>Calificación</Text>
+
       <View style={styles.starsContainer}>
+
         {[1, 2, 3, 4, 5].map((star) => (
+
           <TouchableOpacity key={star} onPress={() => setRating(star)}>
             <Text style={styles.star}>{rating >= star ? "⭐" : "☆"}</Text>
           </TouchableOpacity>
+
         ))}
+
       </View>
 
+
+      {/* GENEROS */}
+      <Text style={styles.sectionTitle}>Géneros</Text>
+
+      <View style={styles.genreContainer}>
+
+        {GENRES.map((genre) => (
+
+          <TouchableOpacity
+            key={genre}
+            style={[
+              styles.genreBtn,
+              genres.includes(genre) && styles.genreActive
+            ]}
+            onPress={() => toggleGenre(genre)}
+          >
+
+            <Text>{genre}</Text>
+
+          </TouchableOpacity>
+
+        ))}
+
+      </View>
+
+
       <Text style={styles.sectionTitle}>Notas personales</Text>
+
       <TextInput
         style={[styles.input, { height: 100 }]}
         value={personalNotes}
@@ -221,58 +362,161 @@ export default function EditBookScreen() {
         multiline
       />
 
+
       <Text style={styles.sectionTitle}>Notas por capítulo</Text>
-      <Text style={{ marginBottom: 6 }}>Selecciona capítulo</Text>
 
       <Picker
         selectedValue={chapter}
         style={{ height: 50, width: 150, marginBottom: 10 }}
         onValueChange={(itemValue: string) => setChapter(itemValue)}
       >
+
         {Array.from({ length: 200 }, (_, i) => i + 1).map((c) => (
+
           <Picker.Item key={c} label={`Capítulo ${c}`} value={`${c}`} />
+
         ))}
+
       </Picker>
+
 
       <TextInput
         style={[styles.input, { height: 80 }]}
         value={chapterNotes[chapter] || ""}
         onChangeText={(text) => handleChapterNoteChange(chapter, text)}
-        placeholder={`Escribe nota del capítulo ${chapter}...`}
+        placeholder={`Escribe nota del capítulo ${chapter}`}
         multiline
       />
 
+
       {image && <Image source={{ uri: image }} style={styles.image} />}
+
       <TouchableOpacity style={styles.button} onPress={pickImage}>
         <Text style={styles.buttonText}>Cambiar imagen</Text>
       </TouchableOpacity>
+
 
       <TouchableOpacity
         style={[styles.button, styles.saveButton]}
         onPress={saveBook}
       >
+
         <Text style={[styles.buttonText, { color: "#fff" }]}>
           {saving ? "Guardando..." : "Guardar cambios"}
         </Text>
+
       </TouchableOpacity>
+
     </ScrollView>
+
   );
+
 }
+
 
 // ================= STYLES =================
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fde2ea" },
-  title: { fontSize: 24, fontWeight: "bold", color: "#e75480", marginBottom: 20, textAlign: "center" },
-  input: { backgroundColor: "#fff", padding: 12, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: "#ddd" },
-  percent: { fontWeight: "bold", marginBottom: 10 },
-  sectionTitle: { fontWeight: "bold", marginBottom: 6 },
-  statusContainer: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
-  statusBtn: { backgroundColor: "#fff", padding: 10, borderRadius: 10 },
-  statusActive: { backgroundColor: "#efa0b4" },
-  starsContainer: { flexDirection: "row", marginBottom: 15 },
-  star: { fontSize: 26, marginRight: 6 },
-  image: { width: 180, height: 260, alignSelf: "center", marginTop: 20, borderRadius: 12 },
-  button: { backgroundColor: "#fff", padding: 14, borderRadius: 14, alignItems: "center", marginTop: 10 },
-  saveButton: { backgroundColor: "#e75480" },
-  buttonText: { fontWeight: "bold", color: "#e75480" },
+
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#fde2ea"
+  },
+
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#e75480",
+    marginBottom: 20,
+    textAlign: "center"
+  },
+
+  input: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#ddd"
+  },
+
+  percent: {
+    fontWeight: "bold",
+    marginBottom: 10
+  },
+
+  sectionTitle: {
+    fontWeight: "bold",
+    marginBottom: 6
+  },
+
+  statusContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15
+  },
+
+  statusBtn: {
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 10
+  },
+
+  statusActive: {
+    backgroundColor: "#efa0b4"
+  },
+
+  starsContainer: {
+    flexDirection: "row",
+    marginBottom: 15
+  },
+
+  star: {
+    fontSize: 26,
+    marginRight: 6
+  },
+
+  genreContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 15
+  },
+
+  genreBtn: {
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 10,
+    marginRight: 8,
+    marginBottom: 8
+  },
+
+  genreActive: {
+    backgroundColor: "#efa0b4"
+  },
+
+  image: {
+    width: 180,
+    height: 260,
+    alignSelf: "center",
+    marginTop: 20,
+    borderRadius: 12
+  },
+
+  button: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 10
+  },
+
+  saveButton: {
+    backgroundColor: "#e75480"
+  },
+
+  buttonText: {
+    fontWeight: "bold",
+    color: "#e75480"
+  }
+
 });

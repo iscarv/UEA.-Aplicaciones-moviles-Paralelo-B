@@ -1,4 +1,3 @@
-// app/book-details.tsx
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -13,6 +12,7 @@ const StarRating = ({ rating }: { rating: number }) => {
 
 export default function BookDetails() {
   const params = useLocalSearchParams();
+
   const totalPages = Number(params.pages_total) || 0;
   const pagesRead = Number(params.pages_read) || 0;
   const percent = totalPages > 0 ? Math.round((pagesRead / totalPages) * 100) : 0;
@@ -21,14 +21,13 @@ export default function BookDetails() {
   let personalNotes = "";
   let chapterNotes: Record<string, string> = {};
 
-  // Personal notes: siempre string
   if (params.personal_notes) {
     personalNotes = params.personal_notes as string;
   }
 
-  // Chapter notes: puede venir como string o ya objeto, casteamos seguro
   if (params.chapter_notes) {
     const raw = params.chapter_notes as unknown;
+
     if (typeof raw === "string") {
       try {
         chapterNotes = JSON.parse(raw) as Record<string, string>;
@@ -43,6 +42,18 @@ export default function BookDetails() {
 
   const rating = Number(params.rating) || 0;
 
+  // ================== PARSEAR GÉNEROS ==================
+  let genres: string[] = [];
+
+  if (params.genres) {
+    try {
+      genres = JSON.parse(params.genres as string);
+    } catch (e) {
+      console.log("No se pudo parsear genres:", e);
+      genres = [];
+    }
+  }
+
   return (
     <ScrollView style={styles.container}>
       {/* Nombre y autor */}
@@ -50,14 +61,29 @@ export default function BookDetails() {
         <Text style={styles.bold}>Nombre del libro: </Text>
         {params.title}
       </Text>
+
       <Text style={styles.line}>
         <Text style={styles.bold}>Autor: </Text>
         {params.author}
       </Text>
+
       <Text style={styles.line}>
         <Text style={styles.bold}>Estado: </Text>
         {params.status || "Por leer"}
       </Text>
+
+      {/* ================= GÉNEROS ================= */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Géneros</Text>
+
+        {genres.length === 0 ? (
+          <Text>Sin géneros</Text>
+        ) : (
+          genres.map((g) => (
+            <Text key={g}>• {g}</Text>
+          ))
+        )}
+      </View>
 
       {/* Barra de progreso visual */}
       <View style={styles.progressBarWrapper}>
@@ -65,6 +91,7 @@ export default function BookDetails() {
           <View style={[styles.progressBarFilled, { flex: percent }]} />
           <View style={[styles.progressBarEmpty, { flex: 100 - percent }]} />
         </View>
+
         <Text style={styles.percent}>
           {pagesRead} / {totalPages} páginas ({percent}%)
         </Text>
@@ -76,6 +103,7 @@ export default function BookDetails() {
       {/* Notas por capítulo */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notas por capítulo:</Text>
+
         {Object.keys(chapterNotes).length === 0 ? (
           <Text>Sin notas por capítulo</Text>
         ) : (
@@ -99,16 +127,23 @@ export default function BookDetails() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#fde2ea" },
+
   line: { fontSize: 16, marginBottom: 6 },
+
   bold: { fontWeight: "bold" },
+
   stars: { fontSize: 20, color: "#f5c518", marginBottom: 12 },
+
   section: { marginTop: 15 },
+
   sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
+
   noteItem: { marginBottom: 6 },
+
   chapter: { fontWeight: "bold" },
 
-  // ================= Barra de progreso =================
   progressBarWrapper: { marginVertical: 10 },
+
   progressBarContainer: {
     flexDirection: "row",
     height: 16,
@@ -117,7 +152,10 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#eee",
   },
+
   progressBarFilled: { backgroundColor: "#e75480" },
+
   progressBarEmpty: { backgroundColor: "#eee" },
+
   percent: { fontSize: 14, fontWeight: "bold", marginTop: 4 },
 });

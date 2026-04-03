@@ -7,8 +7,8 @@ exports.createBook = async (data) => {
 
   const sql = `
     INSERT INTO books 
-    (title, author, image, user_id, favorite, pages_total, pages_read, status, rating, personal_notes, chapter_notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (title, author, image, user_id, favorite, pages_total, pages_read, status, rating, personal_notes, chapter_notes, genres)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const [result] = await db.query(sql, [
@@ -22,7 +22,8 @@ exports.createBook = async (data) => {
     data.status ?? "Por leer",
     data.rating ?? 0,
     data.personal_notes ?? "",
-    data.chapter_notes ? JSON.stringify(data.chapter_notes) : "{}"
+    data.chapter_notes ? JSON.stringify(data.chapter_notes) : "{}",
+    data.genres ? JSON.stringify(data.genres) : "[]"
   ]);
 
   return result;
@@ -40,10 +41,11 @@ exports.getBooksByUser = async (userId) => {
 
   const [rows] = await db.query(sql, [userId]);
 
-  // Parsear JSON de chapter_notes antes de retornar
+  // Parsear JSON de chapter_notes y genres antes de retornar
   return rows.map((row) => ({
     ...row,
-    chapter_notes: row.chapter_notes ? JSON.parse(row.chapter_notes) : {}
+    chapter_notes: row.chapter_notes ? JSON.parse(row.chapter_notes) : {},
+    genres: row.genres ? JSON.parse(row.genres) : []
   }));
 };
 
@@ -92,7 +94,7 @@ exports.updateBook = async (id, data) => {
       UPDATE books
       SET title = ?, author = ?, image = ?, favorite = ?, 
           pages_total = ?, pages_read = ?, status = ?, rating = ?, 
-          personal_notes = ?, chapter_notes = ?
+          personal_notes = ?, chapter_notes = ?, genres = ?
       WHERE id = ?
     `;
 
@@ -107,6 +109,7 @@ exports.updateBook = async (id, data) => {
       data.rating ?? 0,
       data.personal_notes ?? "",
       data.chapter_notes ? JSON.stringify(data.chapter_notes) : "{}",
+      data.genres ? JSON.stringify(data.genres) : "[]",
       id
     ];
 
@@ -121,7 +124,7 @@ exports.updateBook = async (id, data) => {
       UPDATE books
       SET title = ?, author = ?, favorite = ?, 
           pages_total = ?, pages_read = ?, status = ?, rating = ?, 
-          personal_notes = ?, chapter_notes = ?
+          personal_notes = ?, chapter_notes = ?, genres = ?
       WHERE id = ?
     `;
 
@@ -135,6 +138,7 @@ exports.updateBook = async (id, data) => {
       data.rating ?? 0,
       data.personal_notes ?? "",
       data.chapter_notes ? JSON.stringify(data.chapter_notes) : "{}",
+      data.genres ? JSON.stringify(data.genres) : "[]",
       id
     ];
 
