@@ -19,13 +19,15 @@ import { deleteBook, getBooks, updateBook } from "../../services/bookService";
 
 export default function MyBooksScreen() {
   const router = useRouter();
+
+  // Estados
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFavorites, setShowFavorites] = useState(false);
   const [search, setSearch] = useState("");
 
   // =====================================================
-  // CARGAR LIBROS
+  // CARGAR LIBROS DESDE EL BACKEND
   // =====================================================
   const loadBooks = async () => {
     try {
@@ -40,7 +42,7 @@ export default function MyBooksScreen() {
   };
 
   // =====================================================
-  // REFRESCO AUTOMÁTICO
+  // REFRESCO AUTOMÁTICO CUANDO LA PANTALLA ESTÁ ENFOCADA
   // =====================================================
   useFocusEffect(
     useCallback(() => {
@@ -82,7 +84,7 @@ export default function MyBooksScreen() {
   };
 
   // =====================================================
-  // FAVORITO
+  // TOGGLE FAVORITO
   // =====================================================
   const toggleFavorite = async (book: any) => {
     try {
@@ -99,16 +101,18 @@ export default function MyBooksScreen() {
   };
 
   // =====================================================
-  // URL IMAGEN
+  // OBTENER URL COMPLETA DE LA IMAGEN
   // =====================================================
   const getImageUrl = (image?: string) => {
     if (!image) return undefined;
-    const base = image.startsWith("http") ? image : `http://192.168.100.10:3000${image}`;
+    const base = image.startsWith("http")
+      ? image
+      : `http://192.168.100.10:3000${image}`;
     return `${base}?cache=${Date.now()}`;
   };
 
   // =====================================================
-  // FILTRO + BÚSQUEDA
+  // FILTRAR LIBROS POR FAVORITOS Y BÚSQUEDA
   // =====================================================
   const filteredBooks = books.filter((book) => {
     const matchesSearch =
@@ -127,7 +131,7 @@ export default function MyBooksScreen() {
     const read = Number(item.pages_read) || 0;
     const percent = total > 0 ? Math.round((read / total) * 100) : 0;
 
-    // CALIFICACIÓN EN ESTRELLAS
+    // Calificación en estrellas
     const stars = [];
     const rating = Math.round(item.rating || 0);
     for (let i = 1; i <= 5; i++) {
@@ -155,6 +159,7 @@ export default function MyBooksScreen() {
 
           {/* BOTONES */}
           <View style={styles.actions}>
+            {/* EDITAR */}
             <TouchableOpacity
               style={styles.editBtn}
               onPress={() =>
@@ -167,6 +172,7 @@ export default function MyBooksScreen() {
               <Text style={styles.btnText}>Editar</Text>
             </TouchableOpacity>
 
+            {/* DETALLES */}
             <TouchableOpacity
               style={styles.detailsBtn}
               onPress={() =>
@@ -174,9 +180,9 @@ export default function MyBooksScreen() {
                   pathname: "/book-details",
                   params: {
                     ...item,
-                    // 🔹 Solución completa: enviar siempre campos válidos
-                    chapter_notes: JSON.stringify(item.chapterNotes ?? {}),
-                    personal_notes: item.personalNotes ?? "",
+                    // 🔹 Corrección: enviamos el objeto directamente
+                    chapter_notes: item.chapter_notes ?? {},
+                    personal_notes: item.personal_notes ?? "",
                   },
                 })
               }
@@ -185,7 +191,7 @@ export default function MyBooksScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* FAVORITO */}
+          {/* FAVORITOS */}
           <TouchableOpacity
             style={styles.favoriteBtn}
             onPress={() => toggleFavorite(item)}
@@ -211,7 +217,7 @@ export default function MyBooksScreen() {
   }
 
   // =====================================================
-  // VACÍO
+  // PANTALLA VACÍA
   // =====================================================
   if (books.length === 0) {
     return (
@@ -223,7 +229,7 @@ export default function MyBooksScreen() {
   }
 
   // =====================================================
-  // LISTA
+  // LISTA DE LIBROS
   // =====================================================
   return (
     <View style={styles.container}>
@@ -235,6 +241,7 @@ export default function MyBooksScreen() {
         style={styles.search}
       />
 
+      {/* FILTRO FAVORITOS */}
       <View style={styles.filterContainer}>
         <TouchableOpacity
           style={!showFavorites ? styles.filterActive : styles.filterBtn}
@@ -250,6 +257,7 @@ export default function MyBooksScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* FLATLIST DE LIBROS */}
       <FlatList
         data={filteredBooks}
         keyExtractor={(item) => item.id.toString()}

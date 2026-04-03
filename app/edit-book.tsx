@@ -41,35 +41,37 @@ export default function EditBookScreen() {
 
   const [personalNotes, setPersonalNotes] = useState(""); // notas personales
   const [chapterNotes, setChapterNotes] = useState<{ [key: string]: string }>({}); // notas por capítulo
-
   const [chapter, setChapter] = useState("1");
   const [image, setImage] = useState<string | null>(getParam(params.image) || null);
   const [saving, setSaving] = useState(false);
 
   // ================= CARGAR NOTAS EXISTENTES =================
   useEffect(() => {
-    // Notas personales
-    if (params.notes) {
-      try {
-        const parsed = JSON.parse(getParam(params.notes));
-        setPersonalNotes(parsed.personal || "");
-      } catch (e) {
-        console.log("No se pudo parsear notes:", e);
-        setPersonalNotes(getParam(params.notes));
+    // Personal notes
+    if (params.personal_notes) {
+      const raw = params.personal_notes as unknown;
+      if (typeof raw === "string") {
+        setPersonalNotes(raw);
+      } else if (typeof raw === "object" && raw !== null) {
+        setPersonalNotes((raw as any).toString() || "");
       }
     }
 
-    // Notas por capítulo
+    // Chapter notes
     if (params.chapter_notes) {
-      try {
-        const parsedChapters = JSON.parse(getParam(params.chapter_notes));
-        setChapterNotes(parsedChapters || {});
-      } catch (e) {
-        console.log("No se pudo parsear chapter_notes:", e);
-        setChapterNotes({});
+      const raw = params.chapter_notes as unknown;
+      if (typeof raw === "string") {
+        try {
+          setChapterNotes(JSON.parse(raw) || {});
+        } catch (e) {
+          console.log("No se pudo parsear chapter_notes:", e);
+          setChapterNotes({});
+        }
+      } else if (typeof raw === "object" && raw !== null) {
+        setChapterNotes(raw as Record<string, string>);
       }
     }
-  }, [params.notes, params.chapter_notes]);
+  }, [params.personal_notes, params.chapter_notes]);
 
   const total = Number(pagesTotal);
   const read = Number(pagesRead);
@@ -114,7 +116,6 @@ export default function EditBookScreen() {
       formData.append("pages_read", pagesRead || "0");
       formData.append("status", status);
       formData.append("rating", rating.toString());
-
       formData.append("personal_notes", personalNotes);
       formData.append("chapter_notes", JSON.stringify(chapterNotes));
 

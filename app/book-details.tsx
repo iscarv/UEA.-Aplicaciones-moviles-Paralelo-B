@@ -20,17 +20,24 @@ export default function BookDetails() {
   // ================== PARSEAR NOTAS ==================
   let personalNotes = "";
   let chapterNotes: Record<string, string> = {};
-  
+
+  // Personal notes: siempre string
   if (params.personal_notes) {
     personalNotes = params.personal_notes as string;
   }
 
+  // Chapter notes: puede venir como string o ya objeto, casteamos seguro
   if (params.chapter_notes) {
-    try {
-      chapterNotes = JSON.parse(params.chapter_notes as string);
-    } catch (e) {
-      console.log("No se pudo parsear chapter_notes JSON:", e);
-      chapterNotes = {};
+    const raw = params.chapter_notes as unknown;
+    if (typeof raw === "string") {
+      try {
+        chapterNotes = JSON.parse(raw) as Record<string, string>;
+      } catch (e) {
+        console.log("No se pudo parsear chapter_notes JSON:", e);
+        chapterNotes = {};
+      }
+    } else if (typeof raw === "object" && raw !== null) {
+      chapterNotes = raw as Record<string, string>;
     }
   }
 
@@ -58,7 +65,9 @@ export default function BookDetails() {
           <View style={[styles.progressBarFilled, { flex: percent }]} />
           <View style={[styles.progressBarEmpty, { flex: 100 - percent }]} />
         </View>
-        <Text style={styles.percent}>{pagesRead} / {totalPages} páginas ({percent}%)</Text>
+        <Text style={styles.percent}>
+          {pagesRead} / {totalPages} páginas ({percent}%)
+        </Text>
       </View>
 
       {/* Calificación */}
@@ -70,10 +79,10 @@ export default function BookDetails() {
         {Object.keys(chapterNotes).length === 0 ? (
           <Text>Sin notas por capítulo</Text>
         ) : (
-          Object.entries(chapterNotes).map(([chapter, note]) => (
-            <View key={chapter} style={styles.noteItem}>
-              <Text style={styles.chapter}>Capítulo {chapter}:</Text>
-              <Text>{note}</Text>
+          Object.keys(chapterNotes).map((cap) => (
+            <View key={cap} style={styles.noteItem}>
+              <Text style={styles.chapter}>Capítulo {cap}:</Text>
+              <Text>{chapterNotes[cap] || "-"}</Text>
             </View>
           ))
         )}
@@ -105,15 +114,10 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     overflow: "hidden",
-    width: "100%", // crucial para Expo Go
+    width: "100%",
     backgroundColor: "#eee",
   },
-  progressBarFilled: {
-    backgroundColor: "#e75480",
-  },
-  progressBarEmpty: {
-    backgroundColor: "#eee",
-  },
+  progressBarFilled: { backgroundColor: "#e75480" },
+  progressBarEmpty: { backgroundColor: "#eee" },
   percent: { fontSize: 14, fontWeight: "bold", marginTop: 4 },
-
 });
