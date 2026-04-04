@@ -9,7 +9,7 @@ const path = require("path");             // Manejo de rutas de archivos
 
 const authRoutes = require("./src/routes/auth.routes");   // Rutas de autenticación
 const bookRoutes = require("./src/routes/book.routes");   // Rutas de libros
-
+const userRoutes = require("./src/routes/user.routes");   // Rutas de usuarios
 
 // ================= INICIALIZACIÓN DEL SERVIDOR =================
 const app = express();
@@ -94,6 +94,17 @@ POST /api/books
 DELETE /api/books/:id
 */
 app.use("/api/books", bookRoutes);
+
+/*
+Prefijo para rutas de usuarios (solo administrador)
+
+Permite que el administrador pueda ver
+la lista de usuarios registrados.
+
+Ejemplo:
+GET /api/users
+*/
+app.use("/api/users", userRoutes);
 
 
 // ================= RUTA DE PRUEBA =================

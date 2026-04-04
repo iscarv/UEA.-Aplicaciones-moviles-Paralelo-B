@@ -1,11 +1,10 @@
 // ================= IMPORTS =================
 
-// Tabs permite crear navegación inferior por pestañas
-// en la parte inferior de la aplicación
-import { Tabs } from "expo-router";
-
-// Librería de iconos incluida en Expo
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Tabs } from "expo-router";
+import { jwtDecode } from "jwt-decode";
+import { useEffect, useState } from "react";
 
 
 /*
@@ -33,25 +32,73 @@ Pestañas disponibles:
 ➕ Agregar libro
 📚 Mis libros
 ⏱ Historial de lecturas recientes
+👤 Usuarios (solo administrador)
+
 */
 
 
 export default function TabLayout() {
 
+  const [role, setRole] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // ====================================================
+  // OBTENER ROLE DEL TOKEN
+  // ====================================================
+  useEffect(() => {
+
+    const getUserRole = async () => {
+
+      try {
+
+        const token = await AsyncStorage.getItem("token");
+
+        if (!token) {
+          setRole(0);
+          setLoading(false);
+          return;
+        }
+
+        const decoded: any = jwtDecode(token);
+
+        console.log("ROLE DEL TOKEN:", decoded.role);
+
+        setRole(decoded.role);
+
+      } catch (error) {
+
+        console.log("Error obteniendo rol:", error);
+        setRole(0);
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+    getUserRole();
+
+  }, []);
+
+
+  // ====================================================
+  // EVITAR RENDER HASTA SABER EL ROLE
+  // ====================================================
+  if (loading) {
+    return null;
+  }
+
+
   return (
 
     <Tabs
 
-      // ================= CONFIGURACIÓN GENERAL =================
       screenOptions={{
 
-        // Color del icono cuando la pestaña está activa
         tabBarActiveTintColor: "#e75480",
-
-        // Color del icono cuando la pestaña está inactiva
         tabBarInactiveTintColor: "gray",
-
-        // Mostrar encabezado arriba de cada pantalla
         headerShown: true,
 
       }}
@@ -111,8 +158,9 @@ export default function TabLayout() {
         }}
       />
 
+
       {/* =========================================
-         PESTAÑA HISTORIAL DE LECTURAS RECIENTES
+         PESTAÑA HISTORIAL
       ========================================= */}
       <Tabs.Screen
         name="recent-books"
@@ -121,6 +169,26 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="time"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+
+      {/* =========================================
+         PESTAÑA SOLO ADMIN
+      ========================================= */}
+
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: "Usuarios",
+          href: role === 2 ? "/users" : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="people"
               size={size}
               color={color}
             />

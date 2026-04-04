@@ -72,11 +72,29 @@ function authMiddleware(req, res, next) {
     console.log("✅ TOKEN VÁLIDO:", payload);
 
 
-    // Guardar usuario en request
-    req.user = { id: payload.id };
+    // ============================================================
+    // GUARDAR USUARIO EN REQUEST
+    // ============================================================
+
+    /*
+    Ahora guardamos:
+    ✔ id del usuario
+    ✔ role del usuario
+
+    Esto permitirá verificar si es administrador
+    en rutas protegidas como /users
+    */
+
+    req.user = {
+      id: payload.id,
+      role: payload.role
+    };
 
 
-    // Continuar al controlador
+    // ============================================================
+    // CONTINUAR AL CONTROLADOR
+    // ============================================================
+
     next();
 
   } catch (error) {
