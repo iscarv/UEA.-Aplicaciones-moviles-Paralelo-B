@@ -16,20 +16,14 @@ const authMiddleware = require("../middleware/auth.middleware");
 // ============================================================
 
 const storage = multer.diskStorage({
-
   destination: (req, file, cb) => {
     cb(null, "uploads/");
   },
 
   filename: (req, file, cb) => {
-
-    const uniqueName =
-      Date.now() + "-" + Math.round(Math.random() * 1e9);
-
+    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueName + path.extname(file.originalname));
-
   }
-
 });
 
 const upload = multer({ storage });
@@ -39,23 +33,13 @@ const upload = multer({ storage });
 // ============================================================
 
 const uploadImage = (req, res, next) => {
-
   upload.single("image")(req, res, function (err) {
-
     if (err) {
-
       console.error("❌ Error subiendo imagen:", err);
-
-      return res.status(500).json({
-        message: "Error subiendo imagen"
-      });
-
+      return res.status(500).json({ message: "Error subiendo imagen" });
     }
-
     next();
-
   });
-
 };
 
 // ============================================================
@@ -112,6 +96,16 @@ router.get(
   "/recent",
   authMiddleware,
   bookController.getRecentBooks
+);
+
+// ============================================================
+// OBTENER ESTADÍSTICAS DE LIBROS LEÍDOS
+// ============================================================
+
+router.get(
+  "/stats",
+  authMiddleware,
+  bookController.getReadingStats
 );
 
 // ============================================================

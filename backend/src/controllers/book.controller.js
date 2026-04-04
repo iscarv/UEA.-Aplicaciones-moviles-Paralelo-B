@@ -2,6 +2,7 @@
 // IMPORT MODEL
 // ============================================================
 const Book = require("../models/book.model");
+const db = require("../config/db"); // Necesario para getReadingStats
 
 // ============================================================
 // CREAR LIBRO
@@ -189,5 +190,44 @@ exports.getRecentBooks = async (req, res) => {
   } catch (err) {
     console.error("❌ Error getRecentBooks:", err);
     return res.status(500).json({ message: "Error obteniendo lecturas recientes" });
+  }
+};
+
+// ============================================================
+// OBTENER ESTADÍSTICAS DE LIBROS LEÍDOS
+// ============================================================
+exports.getReadingStats = async (req, res) => {
+  try {
+    const user_id = req.user?.id;
+    if (!user_id) return res.status(401).json({ message: "Usuario no autenticado" });
+
+    const [rows] = await db.execute(
+      `SELECT 
+         MONTH(updated_at) AS month, 
+         YEAR(updated_at) AS year, 
+         COUNT(*) AS count
+       FROM books
+       WHERE user_id = ? AND pages_read >= pages_total
+       GROUP BY year, month
+       ORDER BY year DESC, month DESC`,
+      [user_id]
+    );
+
+    // Calcular totales
+    let booksThisMonth = 0;
+    let booksThisYear = 0;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    rows.forEach((row) => {
+      if (row.year === currentYear) booksThisYear += row.count;
+      if (row.year === currentYear && row.month === currentMonth) booksThisMonth += row.count;
+    });
+
+    return res.json({ booksThisMonth, booksThisYear });
+  } catch (err) {
+    console.error("❌ Error getReadingStats:", err);
+    return res.status(500).json({ message: "Error obteniendo estadísticas" });
   }
 };

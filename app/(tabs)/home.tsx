@@ -10,224 +10,226 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
 // Hooks de React
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+// Hook para ejecutar efecto al enfocar pantalla
+import { useFocusEffect } from "@react-navigation/native";
 
 // Componentes de interfaz de React Native
-import { Button, StyleSheet, Text, View } from "react-native";
+import { Button, Platform, StyleSheet, Text, View } from "react-native";
+
+// Expo Notifications
+import * as Notifications from 'expo-notifications';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 
 /*
 ========================================================
 PANTALLA PROTEGIDA HOME
 ========================================================
-
-Funciones principales:
-
-✔ Solo usuarios autenticados pueden acceder
-✔ Valida token JWT guardado en AsyncStorage
-✔ Consulta endpoint protegido /auth/me
-✔ Permite cerrar sesión
-✔ Permite navegar a la pantalla para agregar libros
-  donde se usará cámara y sistema de archivos
 */
 
 export default function Home() {
 
-  // Hook de navegación
   const router = useRouter();
-
-  // Estado que almacenará los datos del usuario autenticado
   const [user, setUser] = useState<any>(null);
-
-  // Controla la carga inicial mientras se valida el token
   const [loading, setLoading] = useState(true);
-
-  // Indica si el usuario no está autorizado
   const [unauthorized, setUnauthorized] = useState(false);
 
+  const [stats, setStats] = useState({ booksThisMonth: 0, booksThisYear: 0 });
+  const [activeBook, setActiveBook] = useState<any>(null);
+  const [showWebReminder, setShowWebReminder] = useState(false);
 
+  // =====================================================
+  // CARGAR ESTADÍSTICAS
+  // =====================================================
+  const loadStats = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+
+      const res = await fetch(`${api.defaults.baseURL}/books/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      setStats(data);
+    } catch (err) {
+      console.error("❌ Error cargando estadísticas:", err);
+    }
+  };
 
   // =====================================================
   // VALIDACIÓN DEL TOKEN JWT
   // =====================================================
   useEffect(() => {
-
     const checkAuth = async () => {
-
       try {
-
-        // Obtener token guardado
         const token = await AsyncStorage.getItem("token");
-
-        // Obtener fecha de expiración
         const expiresStr = await AsyncStorage.getItem("token_expires");
-
-        // Si no existe token o expiración → no autorizado
         if (!token || !expiresStr) {
           setUnauthorized(true);
           return;
         }
-
         const expires = parseInt(expiresStr, 10);
-
-        // Si expiró el token → limpiar almacenamiento
         if (isNaN(expires) || Date.now() > expires) {
-
           await AsyncStorage.removeItem("token");
           await AsyncStorage.removeItem("token_expires");
-
           setUnauthorized(true);
           return;
         }
 
-
-
-        // =================================================
-        // PETICIÓN AL ENDPOINT PROTEGIDO /auth/me
-        // =================================================
         try {
-
           const res = await api.get("/auth/me", {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` }
           });
-
-          // Guardar datos del usuario
           setUser(res.data);
-
         } catch (err) {
-
-          console.error("Token inválido o error en /auth/me:", err);
-
-          // Si el token no es válido → limpiar sesión
           await AsyncStorage.removeItem("token");
           await AsyncStorage.removeItem("token_expires");
-
           setUnauthorized(true);
         }
 
       } catch (err) {
-
-        console.error("Error verificando token:", err);
         setUnauthorized(true);
-
       } finally {
-
         setLoading(false);
-
       }
     };
-
     checkAuth();
-
   }, []);
 
-
+  // ================= REFRESCAR ESTADÍSTICAS AL ENFOCAR =================
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [])
+  );
 
   // =====================================================
-  // VISTA DE USUARIO NO AUTORIZADO
+  // CARGAR LIBRO ACTIVO
   // =====================================================
-  if (unauthorized) {
+  useEffect(() => {
+    const loadActiveBook = async () => {
+      if (!user) return;
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await api.get("/books", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const books: any[] = res.data;
+        const active = books.find(b => b.status === "Leyendo");
+        setActiveBook(active || null);
 
-    return (
-      <View style={styles.container}>
-        <View style={styles.card}>
+        // Web reminder banner
+        if (Platform.OS === "web" && active) {
+          setShowWebReminder(true);
+        }
 
-          <Text style={styles.title}>BookNotes 📚</Text>
+        // Móvil: programar notificación
+        if (Platform.OS !== "web" && active) {
+          scheduleDailyNotification(active.title);
+        }
 
-          <Text style={{ marginBottom: 15 }}>
-            Introduzca sus credenciales
-          </Text>
-
-          <Button
-            title="Iniciar sesión"
-            color="#e75480"
-            onPress={() => router.replace("/login")}
-          />
-
-        </View>
-      </View>
-    );
-  }
-
-
-
-  // Mientras se valida el token
-  if (loading || !user) return null;
-
-
+      } catch (err) {
+        console.error("❌ Error cargando libro activo:", err);
+      }
+    };
+    loadActiveBook();
+  }, [user]);
 
   // =====================================================
   // FUNCIÓN LOGOUT
   // =====================================================
   const logout = async () => {
-
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("token_expires");
-
     router.replace("/login");
-
   };
 
+  // =====================================================
+  // NOTIFICACIONES
+  // =====================================================
+  const scheduleDailyNotification = async (bookTitle: string) => {
+    // Pedir permisos
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
 
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') return;
+
+    // Cancelar notificaciones previas
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    // Crear trigger de calendario usando SchedulableTriggerInputTypes
+    const trigger: Notifications.CalendarTriggerInput = {
+      type: SchedulableTriggerInputTypes.CALENDAR,
+      hour: 20,
+      minute: 0,
+      repeats: true,
+    };
+
+    // Programar notificación
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '📚 Tiempo de lectura',
+        body: `¡Continúa leyendo "${bookTitle}" hoy!`,
+      },
+      trigger,
+    });
+  };
+
+  // =====================================================
+  // VISTA USUARIO NO AUTORIZADO
+  // =====================================================
+  if (unauthorized) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.title}>BookNotes 📚</Text>
+          <Text style={{ marginBottom: 15 }}>Introduzca sus credenciales</Text>
+          <Button title="Iniciar sesión" color="#e75480" onPress={() => router.replace("/login")} />
+        </View>
+      </View>
+    );
+  }
+
+  if (loading || !user) return null;
 
   // =====================================================
   // INTERFAZ PRINCIPAL HOME
   // =====================================================
   return (
-
     <View style={styles.container}>
-
       <View style={styles.card}>
-
         <Text style={styles.title}>BookNotes 📚</Text>
-
-        {/* Información del usuario */}
         <Text style={styles.text}>Bienvenid@ {user.name}</Text>
+        <Text style={styles.sub}>Correo: {user.email}</Text>
+        <Text style={styles.sub}>Rol: {user.role_id === 2 ? "Administrador" : "Usuario"}</Text>
 
-        <Text style={styles.sub}>
-          Correo: {user.email}
-        </Text>
+        {/* ================= ESTADÍSTICAS ================= */}
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsTitle}>📊 Tu progreso</Text>
+          <Text>Libros leídos este mes: {stats.booksThisMonth}</Text>
+          <Text>Libros leídos este año: {stats.booksThisYear}</Text>
+        </View>
 
-        <Text style={styles.sub}>
-          Rol: {user.role_id === 2 ? "Administrador" : "Usuario"}
-        </Text>
-
-
-
-        {/* ===============================================
-           BOTÓN PARA IR A AGREGAR LIBRO
-           Aquí se probarán:
-
-           - Cámara
-           - Sistema de archivos
-        =============================================== */}
-        <Button
-          title="Agregar libro"
-          onPress={() => router.push("/(tabs)/add-book")}
-        />
-
-
-
-        {/* Espacio visual */}
+        <Button title="Agregar libro" onPress={() => router.push("/(tabs)/add-book")} />
         <View style={{ height: 10 }} />
+        <Button title="Cerrar sesión" color="#e75480" onPress={logout} />
 
-
-
-        {/* Botón cerrar sesión */}
-        <Button
-          title="Cerrar sesión"
-          color="#e75480"
-          onPress={logout}
-        />
-
+        {/* Banner recordatorio web */}
+        {showWebReminder && activeBook && (
+          <View style={styles.webReminder}>
+            <Text>📖 ¡No olvides continuar con tu libro "{activeBook.title}"!</Text>
+          </View>
+        )}
       </View>
-
     </View>
   );
 }
-
-
 
 // =====================================================
 // ESTILOS
@@ -264,6 +266,30 @@ const styles = StyleSheet.create({
   sub: {
     marginBottom: 10,
     color: "#555",
+  },
+
+  statsContainer: {
+    backgroundColor: "#fff",
+    padding: 12,
+    marginVertical: 10,
+    borderRadius: 12,
+    elevation: 2,
+    width: "100%",
+    alignItems: "center",
+  },
+
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 6,
+  },
+
+  webReminder: {
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: "#e75480",
+    borderRadius: 10,
+    alignItems: "center",
   },
 
 });
