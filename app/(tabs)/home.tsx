@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
 // Componentes de interfaz de React Native
-import { Button, Platform, StyleSheet, Text, View } from "react-native";
+import { Alert, Button, Platform, StyleSheet, Text, View } from "react-native";
 
 // Expo Notifications
 import * as Notifications from 'expo-notifications';
@@ -36,7 +36,7 @@ export default function Home() {
   const [unauthorized, setUnauthorized] = useState(false);
 
   const [stats, setStats] = useState({ booksThisMonth: 0, booksThisYear: 0 });
-  const [activeBook, setActiveBook] = useState<any>(null);
+  const [activeBooks, setActiveBooks] = useState<any[]>([]); // ahora es un array
   const [showWebReminder, setShowWebReminder] = useState(false);
 
   // =====================================================
@@ -106,10 +106,10 @@ export default function Home() {
   );
 
   // =====================================================
-  // CARGAR LIBRO ACTIVO
+  // CARGAR LIBROS ACTIVOS
   // =====================================================
   useEffect(() => {
-    const loadActiveBook = async () => {
+    const loadActiveBooks = async () => {
       if (!user) return;
       try {
         const token = await AsyncStorage.getItem("token");
@@ -117,24 +117,27 @@ export default function Home() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const books: any[] = res.data;
-        const active = books.find(b => b.status === "Leyendo");
-        setActiveBook(active || null);
 
-        // Web reminder banner
-        if (Platform.OS === "web" && active) {
+        // Filtrar todos los libros en estado "Leyendo"
+        const readingBooks = books.filter(b => b.status === "Leyendo");
+        setActiveBooks(readingBooks);
+
+        // Web: mostrar banner si hay libros
+        if (Platform.OS === "web" && readingBooks.length > 0) {
           setShowWebReminder(true);
         }
 
-        // Móvil: programar notificación
-        if (Platform.OS !== "web" && active) {
-          scheduleDailyNotification(active.title);
+        // Móvil: programar notificación con todos los títulos
+        if (Platform.OS !== "web" && readingBooks.length > 0) {
+          const titles = readingBooks.map(b => b.title).join(", ");
+          scheduleDailyNotification(titles);
         }
 
       } catch (err) {
-        console.error("❌ Error cargando libro activo:", err);
+        console.error("❌ Error cargando libros activos:", err);
       }
     };
-    loadActiveBook();
+    loadActiveBooks();
   }, [user]);
 
   // =====================================================
@@ -149,7 +152,7 @@ export default function Home() {
   // =====================================================
   // NOTIFICACIONES
   // =====================================================
-  const scheduleDailyNotification = async (bookTitle: string) => {
+  const scheduleDailyNotification = async (bookTitles: string) => {
     // Pedir permisos
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -163,19 +166,43 @@ export default function Home() {
     // Cancelar notificaciones previas
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    // Crear trigger de calendario usando SchedulableTriggerInputTypes
-    const trigger: Notifications.CalendarTriggerInput = {
-      type: SchedulableTriggerInputTypes.CALENDAR,
-      hour: 20,
-      minute: 0,
-      repeats: true,
-    };
+    // Hora para prueba
+    const now = new Date();
+    const targetHour = 22;
+    const targetMinute = 36; // hora para probar
 
-    // Programar notificación
+    if (Platform.OS === 'android' && __DEV__) {
+      // En Expo Go Android: simulamos notificación con alert
+      const target = new Date();
+      target.setHours(targetHour, targetMinute, 0, 0);
+      let delay = target.getTime() - now.getTime();
+      if (delay < 0) delay += 24 * 60 * 60 * 1000; // siguiente día
+      setTimeout(() => {
+        Alert.alert('📚 Tiempo de lectura', `¡Continúa leyendo tus libros: ${bookTitles} hoy!`);
+      }, delay);
+      return;
+    }
+
+    // Trigger real
+    const trigger: Notifications.NotificationTriggerInput =
+      Platform.OS === 'android'
+        ? {
+            type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+            seconds: 60 * 60 * 24, // cada 24 horas
+            repeats: true,
+          }
+        : {
+            type: SchedulableTriggerInputTypes.CALENDAR,
+            hour: targetHour,
+            minute: targetMinute,
+            repeats: true,
+          };
+
+    // Programar notificación real
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '📚 Tiempo de lectura',
-        body: `¡Continúa leyendo "${bookTitle}" hoy!`,
+        body: `¡Continúa leyendo tus libros: ${bookTitles} hoy!`,
       },
       trigger,
     });
@@ -221,9 +248,11 @@ export default function Home() {
         <Button title="Cerrar sesión" color="#e75480" onPress={logout} />
 
         {/* Banner recordatorio web */}
-        {showWebReminder && activeBook && (
+        {showWebReminder && activeBooks.length > 0 && (
           <View style={styles.webReminder}>
-            <Text>📖 ¡No olvides continuar con tu libro "{activeBook.title}"!</Text>
+            <Text>
+              📖 ¡No olvides continuar con tus libros: {activeBooks.map(b => `"${b.title}"`).join(", ")}!
+            </Text>
           </View>
         )}
       </View>
