@@ -4,7 +4,7 @@
     "slug": "BookNotes",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/BookNotes.png",
+    "icon": "./assets/images/default.png",
     "scheme": "booknotes",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -21,14 +21,14 @@
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/BookNotes.png"
+        "foregroundImage": "./assets/images/default.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.BookNotes"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/BookNotes.png"
+      "favicon": "./assets/images/default.png"
     },
     "plugins": [
       "expo-router",
